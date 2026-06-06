@@ -9,28 +9,24 @@ export const useStore = create(
       setUser: (user) => set({ user }),
       logout: () => set({ user: null }),
 
-      // Theme
-      darkMode: true,
-      toggleDarkMode: () => set((s) => ({ darkMode: !s.darkMode })),
-
       // Language
-      lang: 'bn', // 'bn' or 'en'
+      lang: 'bn',
       setLang: (lang) => set({ lang }),
 
-      // User goal (shown on front page)
+      // User goal
       userGoal: '',
       setUserGoal: (g) => set({ userGoal: g }),
 
       // Exam countdown
       exams: [],
-      addExam: (exam) => set((s) => ({ exams: [...s.exams, { ...exam, id: Date.now() }] })),
+      setExams: (exams) => set({ exams }),
+      addExam: (exam) => set((s) => ({ exams: [...s.exams, exam] })),
       removeExam: (id) => set((s) => ({ exams: s.exams.filter((e) => e.id !== id) })),
 
-      // Tracking sections (dynamic)
+      // Tracking sections
       sections: [],
       setSections: (sections) => set({ sections }),
-      addSection: (section) =>
-        set((s) => ({ sections: [...s.sections, { ...section, id: Date.now().toString() }] })),
+      addSection: (section) => set((s) => ({ sections: [...s.sections, section] })),
       updateSection: (id, updates) =>
         set((s) => ({
           sections: s.sections.map((sec) => (sec.id === id ? { ...sec, ...updates } : sec)),
@@ -39,7 +35,8 @@ export const useStore = create(
         set((s) => ({ sections: s.sections.filter((sec) => sec.id !== id) })),
 
       // Daily entries
-      entries: {}, // { 'YYYY-MM-DD': { sectionId: value } }
+      entries: {},
+      setEntries: (entries) => set({ entries }),
       setEntry: (date, sectionId, value) =>
         set((s) => ({
           entries: {
@@ -48,17 +45,17 @@ export const useStore = create(
           },
         })),
       getEntry: (date, sectionId) => {
-        const entries = get().entries
-        return entries[date]?.[sectionId] ?? ''
+        return get().entries[date]?.[sectionId] ?? ''
       },
 
       // To-do
-      todos: {}, // { 'YYYY-MM-DD': [{ id, text, done, reason, progress }] }
-      addTodo: (date, text) =>
+      todos: {},
+      setTodos: (todos) => set({ todos }),
+      addTodo: (date, item) =>
         set((s) => ({
           todos: {
             ...s.todos,
-            [date]: [...(s.todos[date] || []), { id: Date.now(), text, done: false, progress: 0, reason: '' }],
+            [date]: [...(s.todos[date] || []), item],
           },
         })),
       updateTodo: (date, id, updates) =>
@@ -79,7 +76,9 @@ export const useStore = create(
       // Notifications
       notifications: [],
       addNotification: (n) =>
-        set((s) => ({ notifications: [{ ...n, id: Date.now(), read: false }, ...s.notifications.slice(0, 19)] })),
+        set((s) => ({
+          notifications: [{ ...n, id: Date.now(), read: false }, ...s.notifications.slice(0, 19)],
+        })),
       markAllRead: () =>
         set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
 

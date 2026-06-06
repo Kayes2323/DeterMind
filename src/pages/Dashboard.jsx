@@ -1,15 +1,15 @@
 import { useState, useMemo } from 'react'
-import { useStore } from '../store'
+import { useStore } from '../store/store-index'
 import { Card, Button, Badge, Modal, Input, Select } from '../components/ui'
 import { today, getLast7Days, getLast30Days, formatDate, calcDailyScore, t } from '../utils/helpers'
+import { dbAddSection, dbDeleteSection, dbSetEntry } from '../hooks/useSupabase'
 import {
   LineChart, Line, BarChart, Bar, AreaChart, Area,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine
 } from 'recharts'
-import { Plus, Trash2, BarChart2, TrendingUp, TrendingDown, Minus, Table, Activity } from 'lucide-react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDaysInMonth } from 'date-fns'
+import { Plus, Trash2, BarChart2, Table, Activity } from 'lucide-react'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns'
 
-// ─── Constants ───────────────────────────────────────────────────────────────
 const DATA_TYPES = [
   { value: 'number', label: 'সংখ্যা — যেমন: ৬ ঘণ্টা' },
   { value: 'rating', label: 'রেটিং — যেমন: ৫/৫' },
@@ -19,12 +19,10 @@ const DATA_TYPES = [
 ]
 const COLORS = ['#f97316','#22c55e','#3b82f6','#a855f7','#ec4899','#eab308','#06b6d4','#f43f5e']
 
-// ─── Cell Input Popup ─────────────────────────────────────────────────────────
+// ─── Cell Input Popup ────────────────────────────────────────────────────────
 function CellPopup({ section, value, onSave, onClose }) {
   const [val, setVal] = useState(value || '')
-
   const handleSave = () => { onSave(val); onClose() }
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -33,16 +31,14 @@ function CellPopup({ section, value, onSave, onClose }) {
         <p className="text-white font-display font-bold text-base mb-4">
           {section.unit ? `মান দাও (${section.unit})` : 'মান দাও'}
         </p>
-
-        {/* Yes/No */}
         {section.type === 'yes_no' && (
           <div className="flex gap-3 mb-4">
             {['yes','no'].map(v => (
               <button key={v} onClick={() => { onSave(v); onClose() }}
                 className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all border ${
-                  val===v
-                    ? v==='yes' ? 'bg-green-500/30 text-green-300 border-green-500/50'
-                               : 'bg-red-500/30 text-red-300 border-red-500/50'
+                  val===v ? v==='yes'
+                    ? 'bg-green-500/30 text-green-300 border-green-500/50'
+                    : 'bg-red-500/30 text-red-300 border-red-500/50'
                     : 'glass text-gray-400 border-white/10 hover:border-white/30'
                 }`}>
                 {v==='yes' ? '✅ হ্যাঁ' : '❌ না'}
@@ -50,8 +46,6 @@ function CellPopup({ section, value, onSave, onClose }) {
             ))}
           </div>
         )}
-
-        {/* Rating */}
         {section.type === 'rating' && (
           <div className="flex gap-1.5 mb-4 flex-wrap">
             {Array.from({length: parseInt(section.max)||5}, (_,i) => i+1).map(i => (
@@ -62,8 +56,6 @@ function CellPopup({ section, value, onSave, onClose }) {
             ))}
           </div>
         )}
-
-        {/* Number / time / percentage */}
         {['number','time','percentage'].includes(section.type) && (
           <input
             type="number"
@@ -75,14 +67,12 @@ function CellPopup({ section, value, onSave, onClose }) {
             className="w-full glass rounded-xl px-4 py-3 text-2xl text-white text-center font-mono outline-none focus:border-orange-500/50 mb-4"
           />
         )}
-
         {section.type !== 'yes_no' && (
           <div className="flex gap-2">
             <button onClick={onClose} className="flex-1 glass rounded-xl py-2.5 text-sm text-gray-400 hover:text-white transition-all">বাতিল</button>
             <button onClick={handleSave} className="flex-1 gradient-brand rounded-xl py-2.5 text-sm text-white font-medium">সংরক্ষণ ✓</button>
           </div>
         )}
-
         {val && section.type !== 'yes_no' && (
           <button onClick={() => { onSave(''); onClose() }} className="w-full mt-2 text-xs text-gray-600 hover:text-red-400 transition-colors">মুছে ফেলো</button>
         )}
@@ -91,16 +81,32 @@ function CellPopup({ section, value, onSave, onClose }) {
   )
 }
 
-// ─── Add Section Modal ────────────────────────────────────────────────────────
+// ─── Add Section Modal ───────────────────────────────────────────────────────
 function AddSectionModal({ open, onClose, lang }) {
-  const { addSection, sections } = useStore()
-  const [form, setForm] = useState({ name:'', type:'number', unit:'', target:'', max:'5', color: COLORS[0] })
-  const save = () => {
+  const { addSection, sections, user } = useStore()
+  const [form, setForm] = useState({ name:'', type:'number', unit:'', target:'', max:'5' })
+  const [saving, setSaving] = useState(false)
+
+  const save = async () => {
     if (!form.name.trim()) return
-    addSection({ ...form, color: COLORS[sections.length % COLORS.length] })
-    setForm({ name:'', type:'number', unit:'', target:'', max:'5', color: COLORS[0] })
-    onClose()
+    setSaving(true)
+    const sectionData = { ...form, color: COLORS[sections.length % COLORS.length], order_index: sections.length }
+    try {
+      if (user?.id) {
+        const saved = await dbAddSection(user.id, sectionData)
+        addSection(saved)
+      } else {
+        addSection({ ...sectionData, id: Date.now().toString() })
+      }
+      setForm({ name:'', type:'number', unit:'', target:'', max:'5' })
+      onClose()
+    } catch(e) {
+      console.error(e)
+    } finally {
+      setSaving(false)
+    }
   }
+
   return (
     <Modal open={open} onClose={onClose} title="নতুন Column যোগ করো">
       <div className="flex flex-col gap-4">
@@ -125,13 +131,15 @@ function AddSectionModal({ open, onClose, lang }) {
             ))}
           </div>
         </div>
-        <Button onClick={save} className="w-full">Column যোগ করো</Button>
+        <Button onClick={save} disabled={saving} className="w-full">
+          {saving ? 'সংরক্ষণ হচ্ছে...' : 'Column যোগ করো'}
+        </Button>
       </div>
     </Modal>
   )
 }
 
-// ─── Custom Tooltip ───────────────────────────────────────────────────────────
+// ─── Custom Tooltip ──────────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
@@ -146,17 +154,15 @@ const CustomTooltip = ({ active, payload, label }) => {
   )
 }
 
-// ─── Single Section Graph Card ────────────────────────────────────────────────
+// ─── Section Graph Card ──────────────────────────────────────────────────────
 function SectionGraphCard({ section, entries }) {
   const [chartType, setChartType] = useState('line')
   const last30 = getLast30Days()
 
   const data = useMemo(() => last30.map(date => {
     const raw = entries[date]?.[section.id]
-    let val = null
     if (raw === undefined || raw === '') return { date: formatDate(date), value: null }
-    if (section.type === 'yes_no') val = raw === 'yes' ? 1 : 0
-    else val = parseFloat(raw) || 0
+    let val = section.type === 'yes_no' ? (raw === 'yes' ? 1 : 0) : (parseFloat(raw) || 0)
     return { date: formatDate(date), value: val }
   }), [last30, entries, section])
 
@@ -167,12 +173,10 @@ function SectionGraphCard({ section, entries }) {
     ? validVals[validVals.length-1] > validVals[validVals.length-2] ? 'up'
     : validVals[validVals.length-1] < validVals[validVals.length-2] ? 'down' : 'same'
     : 'same'
-
   const target = parseFloat(section.target) || null
 
   return (
     <div className="glass rounded-2xl p-4">
-      {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2.5">
           <div className="w-3 h-10 rounded-full" style={{background: section.color}} />
@@ -181,20 +185,13 @@ function SectionGraphCard({ section, entries }) {
             <p className="text-xs text-gray-500 font-body">{section.unit || section.type}</p>
           </div>
         </div>
-        {/* Chart type toggle */}
         <div className="flex gap-1 p-0.5 bg-white/5 rounded-lg">
           <button onClick={() => setChartType('line')}
-            className={`px-2.5 py-1 rounded-md text-xs transition-all ${chartType==='line'?'bg-white/15 text-white':'text-gray-500 hover:text-white'}`}>
-            📈
-          </button>
+            className={`px-2.5 py-1 rounded-md text-xs transition-all ${chartType==='line'?'bg-white/15 text-white':'text-gray-500'}`}>📈</button>
           <button onClick={() => setChartType('bar')}
-            className={`px-2.5 py-1 rounded-md text-xs transition-all ${chartType==='bar'?'bg-white/15 text-white':'text-gray-500 hover:text-white'}`}>
-            📊
-          </button>
+            className={`px-2.5 py-1 rounded-md text-xs transition-all ${chartType==='bar'?'bg-white/15 text-white':'text-gray-500'}`}>📊</button>
         </div>
       </div>
-
-      {/* Stats row */}
       <div className="flex gap-3 mb-3">
         <div className="flex-1 bg-white/3 rounded-xl p-2 text-center">
           <p className="font-mono font-bold text-white text-sm">{avg.toFixed(1)}</p>
@@ -205,15 +202,12 @@ function SectionGraphCard({ section, entries }) {
           <p className="text-[10px] text-gray-500">সর্বোচ্চ</p>
         </div>
         <div className="flex-1 bg-white/3 rounded-xl p-2 text-center">
-          <p className="font-mono font-bold text-sm"
-            style={{color: trend==='up'?'#22c55e':trend==='down'?'#ef4444':'#eab308'}}>
+          <p className="font-mono font-bold text-sm" style={{color: trend==='up'?'#22c55e':trend==='down'?'#ef4444':'#eab308'}}>
             {trend==='up'?'↑ বাড়ছে':trend==='down'?'↓ কমছে':'→ একই'}
           </p>
           <p className="text-[10px] text-gray-500">ট্রেন্ড</p>
         </div>
       </div>
-
-      {/* Chart */}
       <ResponsiveContainer width="100%" height={130}>
         {chartType === 'bar' ? (
           <BarChart data={data} margin={{top:5,right:5,bottom:0,left:-20}}>
@@ -231,32 +225,23 @@ function SectionGraphCard({ section, entries }) {
             <YAxis tick={{fill:'#4b5563',fontSize:9}} axisLine={false} tickLine={false}/>
             <Tooltip content={<CustomTooltip/>}/>
             {target && <ReferenceLine y={target} stroke={section.color} strokeDasharray="4 4" strokeOpacity={0.6}/>}
-            <Line
-              type="monotone" dataKey="value" name={section.name}
-              stroke={section.color} strokeWidth={2}
-              dot={false} activeDot={{r:4, fill:section.color}}
-              connectNulls={false}
-            />
+            <Line type="monotone" dataKey="value" name={section.name} stroke={section.color} strokeWidth={2}
+              dot={false} activeDot={{r:4, fill:section.color}} connectNulls={false}/>
           </LineChart>
         )}
       </ResponsiveContainer>
-      {target && (
-        <p className="text-[10px] text-gray-600 mt-1">
-          <span style={{color:section.color}}>---</span> লক্ষ্য: {target} {section.unit}
-        </p>
-      )}
+      {target && <p className="text-[10px] text-gray-600 mt-1"><span style={{color:section.color}}>---</span> লক্ষ্য: {target} {section.unit}</p>}
     </div>
   )
 }
 
-// ─── Monthly Table ────────────────────────────────────────────────────────────
+// ─── Monthly Table ───────────────────────────────────────────────────────────
 function MonthlyTable({ sections, entries, setEntry, month }) {
-  const [popup, setPopup] = useState(null) // {date, section}
+  const [popup, setPopup] = useState(null)
 
   const days = useMemo(() => {
-    const start = startOfMonth(month)
-    const end = endOfMonth(month)
-    return eachDayOfInterval({start, end}).map(d => format(d,'yyyy-MM-dd'))
+    return eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) })
+      .map(d => format(d,'yyyy-MM-dd'))
   }, [month])
 
   const displayVal = (section, val) => {
@@ -293,15 +278,13 @@ function MonthlyTable({ sections, entries, setEntry, month }) {
           </tr>
         </thead>
         <tbody>
-          {days.map((date, i) => {
+          {days.map(date => {
             const dayEntries = entries[date] || {}
             const isToday = date === today()
             const dayNum = format(new Date(date+'T00:00:00'), 'dd')
             const dayName = format(new Date(date+'T00:00:00'), 'EEE')
-            const isFriday = format(new Date(date+'T00:00:00'), 'EEE') === 'Fri'
             return (
-              <tr key={date}
-                className={`border-b border-white/4 transition-colors hover:bg-white/3 ${isToday?'bg-orange-500/5':''} ${isFriday?'bg-blue-500/3':''}`}>
+              <tr key={date} className={`border-b border-white/4 transition-colors hover:bg-white/3 ${isToday?'bg-orange-500/5':''}`}>
                 <td className={`px-3 py-2.5 sticky left-0 z-10 ${isToday?'bg-orange-500/10':'bg-dark-900'}`}>
                   <div className="flex flex-col">
                     <span className={`font-mono font-bold ${isToday?'text-orange-400':'text-gray-300'}`}>{dayNum}</span>
@@ -315,9 +298,7 @@ function MonthlyTable({ sections, entries, setEntry, month }) {
                       <button
                         onClick={() => setPopup({date, section})}
                         className={`w-full min-w-[70px] py-1.5 px-2 rounded-lg text-xs font-mono transition-all hover:ring-1 ring-white/20 ${
-                          val !== undefined && val !== ''
-                            ? cellBg(section, val)
-                            : 'text-gray-700 hover:text-gray-400 hover:bg-white/5'
+                          val !== undefined && val !== '' ? cellBg(section, val) : 'text-gray-700 hover:text-gray-400 hover:bg-white/5'
                         }`}>
                         {val !== undefined && val !== '' ? displayVal(section, val) : '—'}
                       </button>
@@ -328,7 +309,6 @@ function MonthlyTable({ sections, entries, setEntry, month }) {
             )
           })}
         </tbody>
-        {/* Footer: averages */}
         <tfoot>
           <tr className="bg-white/5 border-t border-white/10">
             <td className="px-3 py-2.5 sticky left-0 bg-dark-800 z-10">
@@ -338,8 +318,7 @@ function MonthlyTable({ sections, entries, setEntry, month }) {
               const vals = days.map(d => entries[d]?.[section.id]).filter(v => v !== undefined && v !== '')
               let avg = '—'
               if (section.type === 'yes_no') {
-                const yes = vals.filter(v=>v==='yes').length
-                avg = `${yes}/${vals.length}`
+                avg = `${vals.filter(v=>v==='yes').length}/${vals.length}`
               } else {
                 const nums = vals.map(v => parseFloat(v)).filter(n => !isNaN(n))
                 if (nums.length) avg = (nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(1)
@@ -353,7 +332,6 @@ function MonthlyTable({ sections, entries, setEntry, month }) {
           </tr>
         </tfoot>
       </table>
-
       {popup && (
         <CellPopup
           section={popup.section}
@@ -366,31 +344,44 @@ function MonthlyTable({ sections, entries, setEntry, month }) {
   )
 }
 
-// ─── Main Dashboard ───────────────────────────────────────────────────────────
+// ─── Main Dashboard ──────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { sections, entries, setEntry, removeSection, lang } = useStore()
-  const [tab, setTab] = useState('table') // 'table' | 'graphs'
+  const { sections, entries, setEntry, removeSection, lang, user } = useStore()
+  const [tab, setTab] = useState('table')
   const [showAdd, setShowAdd] = useState(false)
   const [month, setMonth] = useState(new Date())
 
-  const monthLabel = format(month, 'MMMM yyyy')
+  const handleSetEntry = async (date, sectionId, value) => {
+    setEntry(date, sectionId, value)
+    if (user?.id) {
+      try { await dbSetEntry(user.id, date, sectionId, value) }
+      catch(e) { console.error('Entry save error:', e) }
+    }
+  }
 
+  const handleRemoveSection = async (id) => {
+    removeSection(id)
+    if (user?.id) {
+      try { await dbDeleteSection(id) }
+      catch(e) { console.error('Section delete error:', e) }
+    }
+  }
+
+  const monthLabel = format(month, 'MMMM yyyy')
   const prevMonth = () => setMonth(m => new Date(m.getFullYear(), m.getMonth()-1, 1))
   const nextMonth = () => setMonth(m => new Date(m.getFullYear(), m.getMonth()+1, 1))
 
-  // Monthly summary
   const monthDays = eachDayOfInterval({start: startOfMonth(month), end: endOfMonth(month)})
     .map(d => format(d,'yyyy-MM-dd'))
-  const filledDays = monthDays.filter(d => sections.some(s => entries[d]?.[s.id] !== undefined && entries[d]?.[s.id] !== '')).length
+  const filledDays = monthDays.filter(d =>
+    sections.some(s => entries[d]?.[s.id] !== undefined && entries[d]?.[s.id] !== '')
+  ).length
 
   return (
     <div className="pb-20 md:pb-6">
-      {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <h1 className="font-display text-2xl font-bold text-white">ড্যাশবোর্ড</h1>
-        <Button onClick={() => setShowAdd(true)} size="sm">
-          <Plus size={14}/> Column
-        </Button>
+        <Button onClick={() => setShowAdd(true)} size="sm"><Plus size={14}/> Column</Button>
       </div>
 
       {/* Month selector */}
@@ -403,19 +394,18 @@ export default function Dashboard() {
         <button onClick={nextMonth} className="text-gray-400 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-lg">▶</button>
       </div>
 
-      {/* Tab navigation */}
+      {/* Tabs */}
       <div className="flex gap-2 mb-5 p-1 glass rounded-xl w-fit">
         <button onClick={() => setTab('table')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all font-body ${tab==='table'?'gradient-brand text-white shadow-lg':'text-gray-500 hover:text-white'}`}>
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all font-body ${tab==='table'?'gradient-brand text-white':'text-gray-500 hover:text-white'}`}>
           <Table size={15}/> মাসিক রিপোর্ট
         </button>
         <button onClick={() => setTab('graphs')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all font-body ${tab==='graphs'?'gradient-brand text-white shadow-lg':'text-gray-500 hover:text-white'}`}>
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all font-body ${tab==='graphs'?'gradient-brand text-white':'text-gray-500 hover:text-white'}`}>
           <Activity size={15}/> গ্রাফ বিশ্লেষণ
         </button>
       </div>
 
-      {/* Empty state */}
       {sections.length === 0 && (
         <div className="text-center py-16">
           <BarChart2 size={44} className="mx-auto text-gray-700 mb-3"/>
@@ -430,31 +420,22 @@ export default function Dashboard() {
         <div>
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs text-gray-500 font-body">Cell-এ tap করে data দাও</p>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {sections.map(s => (
-                <button key={s.id} onClick={() => removeSection(s.id)}
+                <button key={s.id} onClick={() => handleRemoveSection(s.id)}
                   className="flex items-center gap-1 text-[10px] text-gray-600 hover:text-red-400 transition-colors glass px-2 py-1 rounded-lg">
                   <Trash2 size={10}/> {s.name}
                 </button>
               ))}
             </div>
           </div>
-          <MonthlyTable
-            sections={sections}
-            entries={entries}
-            setEntry={setEntry}
-            month={month}
-          />
-
-          {/* Monthly summary cards */}
+          <MonthlyTable sections={sections} entries={entries} setEntry={handleSetEntry} month={month}/>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
             {sections.map(section => {
               const vals = monthDays.map(d => entries[d]?.[section.id]).filter(v => v !== undefined && v !== '')
-              let summary = '—'
-              let sub = ''
+              let summary = '—', sub = ''
               if (section.type === 'yes_no') {
-                const yes = vals.filter(v=>v==='yes').length
-                summary = `${yes} দিন`
+                summary = `${vals.filter(v=>v==='yes').length} দিন`
                 sub = `মোট ${vals.length} দিনের মধ্যে`
               } else {
                 const nums = vals.map(v=>parseFloat(v)).filter(n=>!isNaN(n))

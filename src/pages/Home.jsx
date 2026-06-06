@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useStore } from '../store'
+import { useStore } from '../store/store-index'
 import { Card, Button, Badge, ScoreRing, Modal, Input } from '../components/ui'
 import { today, calcStreak, calcDailyScore, t } from '../utils/helpers'
 import { format, differenceInDays, parseISO } from 'date-fns'

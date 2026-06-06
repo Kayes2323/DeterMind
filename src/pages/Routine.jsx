@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useStore } from '../store'
+import { useStore } from '../store/store-index'
 import { Button, Card, Badge, Spinner } from '../components/ui'
 import { callClaude } from '../lib/anthropic'
 import { t } from '../utils/helpers'

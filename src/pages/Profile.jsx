@@ -1,4 +1,4 @@
-import { useStore } from '../store'
+import { useStore } from '../store/store-index'
 import { Card, Badge, Button } from '../components/ui'
 import { t, calcStreak, calcDailyScore, getLast30Days, today } from '../utils/helpers'
 import { useNavigate } from 'react-router-dom'

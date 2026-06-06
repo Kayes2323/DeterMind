@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { useStore } from '../../store'
+import { useStore } from '../../store/store-index'
 import {
   Home, BarChart2, CheckSquare, Calendar, Trophy, User,
   Bell, LogOut, Sun, Moon, ChevronRight, Zap

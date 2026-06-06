@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useStore } from '../store'
+import { useStore } from '../store/store-index'
 import { supabase } from '../lib/supabase'
 import { Zap, ArrowRight } from 'lucide-react'
 

@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { useStore } from './store'
+import { useStore } from './store/store-index'
 import { supabase } from './lib/supabase'
+import { useSupabaseSync } from './hooks/useSupabase'
 import Layout from './components/layout/Layout'
 import Auth from './pages/Auth'
 import Home from './pages/Home'
@@ -11,16 +12,36 @@ import Routine from './pages/Routine'
 import Leaderboard from './pages/Leaderboard'
 import Profile from './pages/Profile'
 
-function PrivateRoute({ children, user }) {
-  return user ? children : <Navigate to="/auth" replace />
+function AppContent() {
+  useSupabaseSync() // loads all data from Supabase on login
+  const { user } = useStore()
+
+  return (
+    <Routes>
+      <Route path="/auth" element={user ? <Navigate to="/" replace /> : <Auth />} />
+      <Route path="/*" element={
+        user ? (
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/todo" element={<Todo />} />
+              <Route path="/routine" element={<Routine />} />
+              <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/profile" element={<Profile />} />
+            </Routes>
+          </Layout>
+        ) : <Navigate to="/auth" replace />
+      }/>
+    </Routes>
+  )
 }
 
 export default function App() {
-  const { setUser, user } = useStore()
+  const { setUser } = useStore()
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser({
@@ -33,7 +54,6 @@ export default function App() {
       setLoading(false)
     })
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser({
@@ -63,23 +83,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/auth" element={user ? <Navigate to="/" replace /> : <Auth />} />
-        <Route path="/*" element={
-          <PrivateRoute user={user}>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/todo" element={<Todo />} />
-                <Route path="/routine" element={<Routine />} />
-                <Route path="/leaderboard" element={<Leaderboard />} />
-                <Route path="/profile" element={<Profile />} />
-              </Routes>
-            </Layout>
-          </PrivateRoute>
-        }/>
-      </Routes>
+      <AppContent />
     </BrowserRouter>
   )
 }

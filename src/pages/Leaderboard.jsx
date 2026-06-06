@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useStore } from '../store'
+import { useStore } from '../store/store-index'
 import { Card, Badge } from '../components/ui'
 import { t } from '../utils/helpers'
 import { Trophy, Medal, Star, Users, Globe, Crown } from 'lucide-react'
