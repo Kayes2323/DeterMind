@@ -11,7 +11,6 @@ const navItems = [
   { to: '/dashboard', icon: BarChart2, label: 'ড্যাশবোর্ড', labelEn: 'Dashboard' },
   { to: '/todo', icon: CheckSquare, label: 'টু-ডু', labelEn: 'To-Do' },
   { to: '/routine', icon: Calendar, label: 'রুটিন', labelEn: 'Routine' },
-  { to: '/leaderboard', icon: Trophy, label: 'লিডারবোর্ড', labelEn: 'Leaderboard' },
   { to: '/profile', icon: User, label: 'প্রোফাইল', labelEn: 'Profile' },
 ]
 
