@@ -1,27 +1,30 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { useStore } from '../../store/store-index'
-import {
-  Home, BarChart2, CheckSquare, Calendar, Trophy, User,
-  Bell, LogOut, Sun, Moon, ChevronRight, Zap
-} from 'lucide-react'
+import { useStore } from '../../store'
+import { Home, BarChart2, Calendar, User, LogOut, Sun, Moon, ChevronRight, Zap } from 'lucide-react'
 import { clsx } from 'clsx'
+
+// Sigma icon — Σ symbol
+function SigmaIcon({ size = 17, className = '' }) {
+  return (
+    <span className={`font-display font-bold ${className}`} style={{ fontSize: size, lineHeight: 1 }}>Σ</span>
+  )
+}
 
 const navItems = [
   { to: '/', icon: Home, label: 'হোম', labelEn: 'Home' },
-  { to: '/dashboard', icon: BarChart2, label: 'ড্যাশবোর্ড', labelEn: 'Dashboard' },
-  { to: '/todo', icon: CheckSquare, label: 'টু-ডু', labelEn: 'To-Do' },
+  { to: '/dashboard', icon: BarChart2, label: 'ট্র্যাকার', labelEn: 'Tracker' },
   { to: '/routine', icon: Calendar, label: 'রুটিন', labelEn: 'Routine' },
+  { to: '/sigma', icon: SigmaIcon, label: 'Sigma', labelEn: 'Sigma' },
   { to: '/profile', icon: User, label: 'প্রোফাইল', labelEn: 'Profile' },
 ]
 
 export default function Layout({ children }) {
-  const { darkMode, toggleDarkMode, lang, setLang, user, logout, notifications } = useStore()
+  const { lang, setLang, user, logout } = useStore()
   const navigate = useNavigate()
-  const unread = notifications.filter((n) => !n.read).length
 
   return (
     <div className="flex h-screen overflow-hidden bg-dark-900">
-      {/* Sidebar */}
+      {/* Sidebar desktop */}
       <aside className="hidden md:flex flex-col w-64 glass border-r border-white/5 p-5 gap-2 shrink-0">
         {/* Logo */}
         <div className="flex items-center gap-2.5 mb-6 px-2">
@@ -34,19 +37,13 @@ export default function Layout({ children }) {
         {/* Nav */}
         <nav className="flex flex-col gap-1 flex-1">
           {navItems.map(({ to, icon: Icon, label, labelEn }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              className={({ isActive }) =>
-                clsx(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
-                  isActive
-                    ? 'bg-orange-500/15 text-orange-400 border border-orange-500/25'
-                    : 'text-gray-500 hover:text-gray-200 hover:bg-white/5'
-                )
-              }
-            >
+            <NavLink key={to} to={to} end={to === '/'}
+              className={({ isActive }) => clsx(
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
+                isActive
+                  ? 'bg-orange-500/15 text-orange-400 border border-orange-500/25'
+                  : 'text-gray-500 hover:text-gray-200 hover:bg-white/5'
+              )}>
               {({ isActive }) => (
                 <>
                   <Icon size={17} className={isActive ? 'text-orange-400' : ''} />
@@ -61,23 +58,13 @@ export default function Layout({ children }) {
         {/* Bottom controls */}
         <div className="flex flex-col gap-2 pt-4 border-t border-white/5">
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setLang(lang === 'bn' ? 'en' : 'bn')}
-              className="flex-1 glass rounded-xl py-2 text-xs text-gray-400 hover:text-white transition-all text-center font-mono"
-            >
+            <button onClick={() => setLang(lang === 'bn' ? 'en' : 'bn')}
+              className="flex-1 glass rounded-xl py-2 text-xs text-gray-400 hover:text-white transition-all text-center font-mono">
               {lang === 'bn' ? 'EN' : 'বাং'}
             </button>
-            <button
-              onClick={toggleDarkMode}
-              className="flex-1 glass rounded-xl py-2 text-xs text-gray-400 hover:text-white transition-all flex items-center justify-center gap-1"
-            >
-              {darkMode ? <Sun size={13} /> : <Moon size={13} />}
-            </button>
           </div>
-          <button
-            onClick={() => { logout(); navigate('/auth') }}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
-          >
+          <button onClick={() => { logout(); navigate('/auth') }}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
             <LogOut size={14} />
             <span className="font-body">{lang === 'bn' ? 'লগআউট' : 'Logout'}</span>
           </button>
@@ -94,16 +81,6 @@ export default function Layout({ children }) {
             </div>
             <span className="font-display text-lg font-bold gradient-text">DeterMind</span>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => navigate('/profile')} className="relative">
-              <Bell size={18} className="text-gray-400" />
-              {unread > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold">
-                  {unread}
-                </span>
-              )}
-            </button>
-          </div>
         </div>
 
         {/* Page content */}
@@ -115,17 +92,11 @@ export default function Layout({ children }) {
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 glass border-t border-white/5 flex justify-around px-2 py-2">
         {navItems.map(({ to, icon: Icon, label, labelEn }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className={({ isActive }) =>
-              clsx(
-                'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-[10px] transition-all',
-                isActive ? 'text-orange-400' : 'text-gray-600'
-              )
-            }
-          >
+          <NavLink key={to} to={to} end={to === '/'}
+            className={({ isActive }) => clsx(
+              'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-[10px] transition-all',
+              isActive ? 'text-orange-400' : 'text-gray-600'
+            )}>
             {({ isActive }) => (
               <>
                 <Icon size={19} className={isActive ? 'text-orange-400' : ''} />

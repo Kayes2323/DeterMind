@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { useStore } from './store/store-index'
+import { useStore } from './store'
 import { supabase } from './lib/supabase'
 import { useSupabaseSync } from './hooks/useSupabase'
 import Layout from './components/layout/Layout'
@@ -9,13 +9,12 @@ import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
 import Todo from './pages/Todo'
 import Routine from './pages/Routine'
-import Leaderboard from './pages/Leaderboard'
+import Sigma from './pages/Sigma'
 import Profile from './pages/Profile'
 
 function AppContent() {
-  useSupabaseSync() // loads all data from Supabase on login
+  useSupabaseSync()
   const { user } = useStore()
-
   return (
     <Routes>
       <Route path="/auth" element={user ? <Navigate to="/" replace /> : <Auth />} />
@@ -27,12 +26,12 @@ function AppContent() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/todo" element={<Todo />} />
               <Route path="/routine" element={<Routine />} />
-              <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/sigma" element={<Sigma />} />
               <Route path="/profile" element={<Profile />} />
             </Routes>
           </Layout>
         ) : <Navigate to="/auth" replace />
-      }/>
+      } />
     </Routes>
   )
 }
@@ -53,7 +52,6 @@ export default function App() {
       }
       setLoading(false)
     })
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser({
@@ -66,20 +64,17 @@ export default function App() {
         setUser(null)
       }
     })
-
     return () => subscription.unsubscribe()
   }, [])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-dark-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
-          <p className="text-gray-500 text-sm font-body">লোড হচ্ছে...</p>
-        </div>
+  if (loading) return (
+    <div className="min-h-screen bg-dark-900 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-10 h-10 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
+        <p className="text-gray-500 text-sm font-body">লোড হচ্ছে...</p>
       </div>
-    )
-  }
+    </div>
+  )
 
   return (
     <BrowserRouter>
