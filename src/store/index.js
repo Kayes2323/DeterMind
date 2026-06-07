@@ -82,6 +82,10 @@ export const useStore = create(
       markAllRead: () =>
         set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
 
+      // Saved Routine
+      savedRoutine: null,
+      setSavedRoutine: (r) => set({ savedRoutine: r }),
+
       // Onboarding
       onboardingDone: false,
       setOnboardingDone: () => set({ onboardingDone: true }),

@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useStore } from '../../store'
-import { Home, BarChart2, Calendar, User, LogOut, Sun, Moon, ChevronRight, Zap } from 'lucide-react'
+import { Home, BarChart2, Calendar, User, LogOut, Moon, ChevronRight, Zap } from 'lucide-react'
 import { clsx } from 'clsx'
 
 // Sigma icon — Σ symbol
