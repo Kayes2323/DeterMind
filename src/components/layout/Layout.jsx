@@ -3,7 +3,7 @@ import { useStore } from '../../store'
 import { Home, BarChart2, Calendar, User, LogOut, ChevronRight, Zap, Timer } from 'lucide-react'
 import { clsx } from 'clsx'
 
-function SigmaIcon({ size = 20, className = '' }) {
+function SigmaIcon({ size = 17, className = '' }) {
   return <span className={`font-display font-bold ${className}`} style={{ fontSize: size, lineHeight: 1 }}>Σ</span>
 }
 
@@ -35,13 +35,13 @@ export default function Layout({ children }) {
           {navItems.map(({ to, icon: Icon, label, labelEn }) => (
             <NavLink key={to} to={to} end={to === '/'}
               className={({ isActive }) => clsx(
-                'flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-150',
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
                 isActive ? 'bg-orange-500/15 text-orange-400 border border-orange-500/25' : 'text-gray-500 hover:text-gray-200 hover:bg-white/5'
               )}>
               {({ isActive }) => (
                 <>
-                  <Icon size={20} className={isActive ? 'text-orange-400' : ''} />
-                  <span className="font-body text-base">{lang === 'bn' ? label : labelEn}</span>
+                  <Icon size={17} className={isActive ? 'text-orange-400' : ''} />
+                  <span className="font-body">{lang === 'bn' ? label : labelEn}</span>
                   {isActive && <ChevronRight size={14} className="ml-auto text-orange-400/60" />}
                 </>
               )}
@@ -51,12 +51,12 @@ export default function Layout({ children }) {
 
         <div className="flex flex-col gap-2 pt-4 border-t border-white/5">
           <button onClick={() => setLang(lang === 'bn' ? 'en' : 'bn')}
-            className="glass rounded-xl py-2.5 text-sm text-gray-400 hover:text-white transition-all text-center font-mono">
+            className="glass rounded-xl py-2 text-xs text-gray-400 hover:text-white transition-all text-center font-mono">
             {lang === 'bn' ? 'EN' : 'বাং'}
           </button>
           <button onClick={() => { logout(); navigate('/auth') }}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
-            <LogOut size={16} />
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+            <LogOut size={14} />
             <span className="font-body">{lang === 'bn' ? 'লগআউট' : 'Logout'}</span>
           </button>
         </div>
@@ -77,22 +77,29 @@ export default function Layout({ children }) {
         </div>
       </main>
 
-      {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 glass border-t border-white/5 flex justify-around px-1 py-2">
-        {navItems.map(({ to, icon: Icon, label, labelEn }) => (
-          <NavLink key={to} to={to} end={to === '/'}
-            className={({ isActive }) => clsx(
-              'flex flex-col items-center gap-1 px-2 py-1 rounded-xl transition-all min-w-[48px]',
-              isActive ? 'text-orange-400' : 'text-gray-600'
-            )}>
-            {({ isActive }) => (
-              <>
-                <Icon size={22} className={isActive ? 'text-orange-400' : ''} />
-                <span className="text-[11px] font-medium">{lang === 'bn' ? label : labelEn}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
+      {/* Mobile bottom nav — 6 items, smaller */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 border-t border-white/8" style={{background:'rgba(10,10,15,0.97)', backdropFilter:'blur(20px)'}}>
+        <div className="flex justify-around px-2 py-2">
+          {navItems.map(({ to, icon: Icon, label, labelEn }) => (
+            <NavLink key={to} to={to} end={to === '/'}
+              className={({ isActive }) => clsx(
+                'flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all min-w-0',
+                isActive ? 'text-orange-400' : 'text-gray-500'
+              )}>
+              {({ isActive }) => (
+                <>
+                  <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-orange-500/15' : ''}`}>
+                    <Icon size={20} className={isActive ? 'text-orange-400' : 'text-gray-500'} />
+                  </div>
+                  <span className={`text-[10px] font-medium transition-all ${isActive ? 'text-orange-400' : 'text-gray-500'}`}>
+                    {lang === 'bn' ? label : labelEn}
+                  </span>
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
+        <div style={{height: 'env(safe-area-inset-bottom, 0px)'}} />
       </nav>
     </div>
   )
