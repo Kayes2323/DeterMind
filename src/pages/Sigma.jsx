@@ -43,15 +43,128 @@ async function chatWithSigma(messages, lang, contextData) {
   return data.choices?.[0]?.message?.content ?? ''
 }
 
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const o = ctx.createOscillator()
+    const g = ctx.createGain()
+    o.connect(g)
+    g.connect(ctx.destination)
+    o.frequency.setValueAtTime(880, ctx.currentTime)
+    o.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15)
+    g.gain.setValueAtTime(0.2, ctx.currentTime)
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3)
+    o.start(ctx.currentTime)
+    o.stop(ctx.currentTime + 0.3)
+  } catch(e) {}
+}
+
+const FORMULAS = [
+  'E=mc²','∫f(x)dx','F=ma','a²+b²=c²',
+  'PV=nRT','eⁱᵖ+1=0','λ=h/p','ΔG=ΔH−TΔS',
+  '∑n²','√(-1)=i','v=λf','pH=−log[H⁺]',
+  'sin²+cos²=1','p=mv','W=Fd','n!=n(n-1)!'
+]
+
+const DIRECTIONS = [
+  { x: -60, y: -55 }, { x: 55, y: -60 }, { x: -65, y: 10 }, { x: 65, y: 15 },
+  { x: -40, y: 60 },  { x: 45, y: 58 },  { x: 0, y: -68 },  { x: 70, y: -30 },
+  { x: -70, y: -30 }, { x: 20, y: 70 },  { x: -20, y: 70 }, { x: 72, y: 40 },
+  { x: -72, y: 40 },  { x: 50, y: -45 }, { x: -50, y: 45 }, { x: 60, y: 55 }
+]
+
+function SigmaLogo({ isTyping }) {
+  const [burst, setBurst] = useState(false)
+  const [formulas, setFormulas] = useState([])
+
+  useEffect(() => {
+    if (isTyping) {
+      triggerBurst()
+      const interval = setInterval(triggerBurst, 2200)
+      return () => clearInterval(interval)
+    }
+  }, [isTyping])
+
+  const triggerBurst = () => {
+    playBeep()
+    const picked = [...FORMULAS].sort(() => Math.random() - 0.5).slice(0, 10)
+    setFormulas(picked)
+    setBurst(true)
+    setTimeout(() => setBurst(false), 1800)
+  }
+
+  return (
+    <div style={{ position: 'relative', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* Pulse rings */}
+      {burst && [0,1,2,3].map(i => (
+        <div key={i} style={{
+          position: 'absolute',
+          width: 40, height: 40,
+          borderRadius: '50%',
+          border: '1.5px solid #f97316',
+          animation: `sigPulse 1.8s ease-out ${i * 0.3}s forwards`,
+          opacity: 0,
+          pointerEvents: 'none',
+        }} />
+      ))}
+
+      {/* Flying formulas */}
+      {burst && formulas.map((f, i) => {
+        const dir = DIRECTIONS[i % DIRECTIONS.length]
+        return (
+          <span key={i} style={{
+            position: 'absolute',
+            fontSize: 8,
+            fontWeight: 600,
+            fontFamily: 'serif',
+            color: i % 2 === 0 ? '#f97316' : '#a855f7',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+            animation: `sigFly 1.6s ease-out ${i * 0.05}s forwards`,
+            opacity: 0,
+            '--dx': dir.x + 'px',
+            '--dy': dir.y + 'px',
+          }}>
+            {f}
+          </span>
+        )
+      })}
+
+      {/* Logo */}
+      <svg width="40" height="40" viewBox="0 0 40 40" style={{ position: 'relative', zIndex: 5 }}>
+        <defs>
+          <linearGradient id="sigGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#f97316"/>
+            <stop offset="100%" stopColor="#7c3aed"/>
+          </linearGradient>
+        </defs>
+        <circle cx="20" cy="20" r="18" fill="none" stroke="url(#sigGrad)" strokeWidth="2.5"/>
+        <circle cx="20" cy="20" r="14" fill="#111"/>
+        <text x="20" y="26" textAnchor="middle" fontSize="16" fontWeight="700" fill="white" fontFamily="serif">Σ</text>
+      </svg>
+
+      <style>{`
+        @keyframes sigPulse {
+          0%   { transform: scale(1); opacity: 0.9; }
+          100% { transform: scale(3); opacity: 0; }
+        }
+        @keyframes sigFly {
+          0%   { opacity: 0; transform: translate(0,0) scale(0.5); }
+          20%  { opacity: 1; }
+          100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 function TypingIndicator() {
   return (
     <div className="flex items-end gap-3 mb-4">
-      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/20">
-        <span className="text-white text-xs font-bold font-display">Σ</span>
-      </div>
+      <SigmaLogo isTyping={true} />
       <div className="glass rounded-2xl rounded-bl-sm px-4 py-3">
         <div className="flex gap-1 items-center h-4">
-          {[0, 1, 2].map(i => (
+          {[0,1,2].map(i => (
             <div key={i} className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce"
               style={{ animationDelay: `${i * 0.15}s` }} />
           ))}
@@ -65,18 +178,13 @@ function MessageBubble({ msg }) {
   const isUser = msg.role === 'user'
   return (
     <div className={`flex items-end gap-3 mb-4 ${isUser ? 'flex-row-reverse' : ''}`}>
-      {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/20">
-          <span className="text-white text-xs font-bold font-display">Σ</span>
-        </div>
-      )}
+      {!isUser && <SigmaLogo isTyping={false} />}
       <div className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm font-body leading-relaxed ${
         isUser
           ? 'gradient-brand text-white rounded-br-sm'
           : 'glass text-gray-100 rounded-bl-sm border border-white/8'
       }`}>
         {msg.content.split('\n').map((line, i) => {
-          // Bold text
           const formatted = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
           return line ? (
             <p key={i} className="mb-1 last:mb-0" dangerouslySetInnerHTML={{ __html: formatted }} />
@@ -119,7 +227,6 @@ export default function Sigma() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
-  // Welcome message
   useEffect(() => {
     if (messages.length === 0) {
       const hour = new Date().getHours()
@@ -138,11 +245,9 @@ export default function Sigma() {
     const msg = text || input.trim()
     if (!msg || loading) return
     setInput('')
-
     const newMessages = [...messages, { role: 'user', content: msg }]
     setMessages(newMessages)
     setLoading(true)
-
     try {
       const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }))
       const reply = await chatWithSigma(apiMessages, lang, contextData)
@@ -175,11 +280,10 @@ export default function Sigma() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] md:h-[calc(100vh-48px)] pb-0">
-      {/* Header */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30 relative">
-            <span className="text-white font-bold font-display text-lg">Σ</span>
+          <div style={{ position: 'relative' }}>
+            <SigmaLogo isTyping={false} />
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-dark-900" />
           </div>
           <div>
@@ -193,7 +297,6 @@ export default function Sigma() {
         </button>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto pr-1 mb-3">
         {messages.map((msg, i) => (
           <MessageBubble key={i} msg={msg} />
@@ -202,7 +305,6 @@ export default function Sigma() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick prompts */}
       {messages.length <= 1 && !loading && (
         <div className="flex gap-2 mb-3 flex-wrap shrink-0">
           {quickPrompts.map((p, i) => (
@@ -215,17 +317,13 @@ export default function Sigma() {
         </div>
       )}
 
-      {/* Input */}
       <div className="glass rounded-2xl p-2 flex items-end gap-2 border border-white/8 shrink-0">
         <textarea
           ref={inputRef}
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              send()
-            }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
           }}
           placeholder={t(lang, 'Sigma-কে কিছু জিজ্ঞেস করো...', 'Ask Sigma anything...')}
           rows={1}
