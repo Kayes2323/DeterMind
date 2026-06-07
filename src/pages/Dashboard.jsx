@@ -4,10 +4,10 @@ import { Card, Button, Badge, Modal, Input, Select } from '../components/ui'
 import { today, getLast7Days, getLast30Days, formatDate, calcDailyScore, t } from '../utils/helpers'
 import { dbAddSection, dbDeleteSection, dbSetEntry } from '../hooks/useSupabase'
 import {
-  LineChart, Line, BarChart, Bar, AreaChart, Area,
+  LineChart, Line, BarChart, Bar,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine
 } from 'recharts'
-import { Plus, Trash2, BarChart2, Table, Activity } from 'lucide-react'
+import { Plus, BarChart2, Table, Activity, MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns'
 
 const DATA_TYPES = [
@@ -81,6 +81,92 @@ function CellPopup({ section, value, onSave, onClose }) {
   )
 }
 
+// ─── Delete Confirm Popup ────────────────────────────────────────────────────
+function DeleteConfirm({ section, onConfirm, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="relative glass rounded-2xl p-6 w-72 z-10 border border-white/10" onClick={e => e.stopPropagation()}>
+        <div className="w-12 h-12 bg-red-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <Trash2 size={22} className="text-red-400" />
+        </div>
+        <p className="text-white font-display font-bold text-center mb-1">Column মুছবে?</p>
+        <p className="text-gray-400 text-xs text-center font-body mb-5">
+          <span style={{color: section.color}} className="font-semibold">"{section.name}"</span> এবং এর সব data মুছে যাবে। এটা undo করা যাবে না।
+        </p>
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 glass rounded-xl py-2.5 text-sm text-gray-400 hover:text-white transition-all">বাতিল</button>
+          <button onClick={onConfirm} className="flex-1 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl py-2.5 text-sm text-red-400 font-medium transition-all">মুছে দাও</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Three Dot Menu ──────────────────────────────────────────────────────────
+function SectionMenu({ section, onEdit, onDelete }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative inline-block">
+      <button
+        onClick={e => { e.stopPropagation(); setOpen(!open) }}
+        className="p-1 rounded-lg text-gray-600 hover:text-white hover:bg-white/10 transition-all">
+        <MoreVertical size={13} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-6 z-50 glass rounded-xl border border-white/10 shadow-xl overflow-hidden w-32">
+            <button
+              onClick={() => { setOpen(false); onEdit() }}
+              className="flex items-center gap-2 w-full px-3 py-2.5 text-xs text-gray-300 hover:bg-white/10 hover:text-white transition-all">
+              <Pencil size={12} className="text-orange-400" /> Edit
+            </button>
+            <button
+              onClick={() => { setOpen(false); onDelete() }}
+              className="flex items-center gap-2 w-full px-3 py-2.5 text-xs text-red-400 hover:bg-red-500/10 transition-all">
+              <Trash2 size={12} /> Delete
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ─── Edit Section Modal ──────────────────────────────────────────────────────
+function EditSectionModal({ section, open, onClose, onSave }) {
+  const [form, setForm] = useState({ name: section.name, unit: section.unit||'', target: section.target||'', max: section.max||'5', color: section.color })
+  const save = () => { onSave({ ...section, ...form }); onClose() }
+  return (
+    <Modal open={open} onClose={onClose} title="Column সম্পাদনা করো">
+      <div className="flex flex-col gap-4">
+        <Input label="Column-এর নাম" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} />
+        {['number','time'].includes(section.type) && (
+          <>
+            <Input label="একক (unit)" value={form.unit} onChange={e=>setForm({...form,unit:e.target.value})} placeholder="ঘণ্টা / পৃষ্ঠা" />
+            <Input label="দৈনিক লক্ষ্য" type="number" value={form.target} onChange={e=>setForm({...form,target:e.target.value})} />
+          </>
+        )}
+        {section.type === 'rating' && (
+          <Input label="সর্বোচ্চ মান" type="number" value={form.max} onChange={e=>setForm({...form,max:e.target.value})} />
+        )}
+        <div>
+          <label className="text-xs text-gray-400 mb-2 block">রঙ</label>
+          <div className="flex gap-2 flex-wrap">
+            {COLORS.map(c => (
+              <button key={c} onClick={() => setForm({...form,color:c})}
+                className={`w-8 h-8 rounded-full border-2 transition-all ${form.color===c?'border-white scale-110':'border-transparent'}`}
+                style={{background:c}} />
+            ))}
+          </div>
+        </div>
+        <Button onClick={save} className="w-full">সংরক্ষণ করো</Button>
+      </div>
+    </Modal>
+  )
+}
+
 // ─── Add Section Modal ───────────────────────────────────────────────────────
 function AddSectionModal({ open, onClose, lang }) {
   const { addSection, sections, user } = useStore()
@@ -100,11 +186,8 @@ function AddSectionModal({ open, onClose, lang }) {
       }
       setForm({ name:'', type:'number', unit:'', target:'', max:'5' })
       onClose()
-    } catch(e) {
-      console.error(e)
-    } finally {
-      setSaving(false)
-    }
+    } catch(e) { console.error(e) }
+    finally { setSaving(false) }
   }
 
   return (
@@ -346,10 +429,12 @@ function MonthlyTable({ sections, entries, setEntry, month }) {
 
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { sections, entries, setEntry, removeSection, lang, user } = useStore()
+  const { sections, entries, setEntry, removeSection, updateSection, lang, user } = useStore()
   const [tab, setTab] = useState('table')
   const [showAdd, setShowAdd] = useState(false)
   const [month, setMonth] = useState(new Date())
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [editTarget, setEditTarget] = useState(null)
 
   const handleSetEntry = async (date, sectionId, value) => {
     setEntry(date, sectionId, value)
@@ -365,6 +450,12 @@ export default function Dashboard() {
       try { await dbDeleteSection(id) }
       catch(e) { console.error('Section delete error:', e) }
     }
+    setDeleteTarget(null)
+  }
+
+  const handleEditSection = (updatedSection) => {
+    if (updateSection) updateSection(updatedSection)
+    setEditTarget(null)
   }
 
   const monthLabel = format(month, 'MMMM yyyy')
@@ -380,7 +471,7 @@ export default function Dashboard() {
   return (
     <div className="pb-20 md:pb-6">
       <div className="flex items-center justify-between mb-5">
-        <h1 className="font-display text-2xl font-bold text-white">ড্যাশবোর্ড</h1>
+        <h1 className="font-display text-2xl font-bold text-white">ট্র্যাকার</h1>
         <Button onClick={() => setShowAdd(true)} size="sm"><Plus size={14}/> Column</Button>
       </div>
 
@@ -393,6 +484,44 @@ export default function Dashboard() {
         </div>
         <button onClick={nextMonth} className="text-gray-400 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-lg">▶</button>
       </div>
+
+      {/* Summary cards — উপরে */}
+      {sections.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+          {sections.map(section => {
+            const vals = monthDays.map(d => entries[d]?.[section.id]).filter(v => v !== undefined && v !== '')
+            let summary = '—', sub = ''
+            if (section.type === 'yes_no') {
+              summary = `${vals.filter(v=>v==='yes').length} দিন`
+              sub = `মোট ${vals.length} দিনের মধ্যে`
+            } else {
+              const nums = vals.map(v=>parseFloat(v)).filter(n=>!isNaN(n))
+              if (nums.length) {
+                const total = nums.reduce((a,b)=>a+b,0)
+                summary = total.toFixed(1)
+                sub = `গড়: ${(total/nums.length).toFixed(1)} ${section.unit||''}`
+              }
+            }
+            return (
+              <div key={section.id} className="glass rounded-2xl p-4 relative">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{background:section.color}}/>
+                    <span className="text-xs text-gray-400 font-body truncate max-w-[80px]">{section.name}</span>
+                  </div>
+                  <SectionMenu
+                    section={section}
+                    onEdit={() => setEditTarget(section)}
+                    onDelete={() => setDeleteTarget(section)}
+                  />
+                </div>
+                <p className="font-display font-black text-xl text-white">{summary}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">{sub || 'মাসের মোট'}</p>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-2 mb-5 p-1 glass rounded-xl w-fit">
@@ -418,45 +547,8 @@ export default function Dashboard() {
       {/* TABLE TAB */}
       {tab === 'table' && sections.length > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs text-gray-500 font-body">Cell-এ tap করে data দাও</p>
-            <div className="flex gap-2 flex-wrap">
-              {sections.map(s => (
-                <button key={s.id} onClick={() => handleRemoveSection(s.id)}
-                  className="flex items-center gap-1 text-[10px] text-gray-600 hover:text-red-400 transition-colors glass px-2 py-1 rounded-lg">
-                  <Trash2 size={10}/> {s.name}
-                </button>
-              ))}
-            </div>
-          </div>
+          <p className="text-xs text-gray-500 font-body mb-3">Cell-এ tap করে data দাও</p>
           <MonthlyTable sections={sections} entries={entries} setEntry={handleSetEntry} month={month}/>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
-            {sections.map(section => {
-              const vals = monthDays.map(d => entries[d]?.[section.id]).filter(v => v !== undefined && v !== '')
-              let summary = '—', sub = ''
-              if (section.type === 'yes_no') {
-                summary = `${vals.filter(v=>v==='yes').length} দিন`
-                sub = `মোট ${vals.length} দিনের মধ্যে`
-              } else {
-                const nums = vals.map(v=>parseFloat(v)).filter(n=>!isNaN(n))
-                if (nums.length) {
-                  const total = nums.reduce((a,b)=>a+b,0)
-                  summary = total.toFixed(1)
-                  sub = `গড়: ${(total/nums.length).toFixed(1)} ${section.unit||''}`
-                }
-              }
-              return (
-                <div key={section.id} className="glass rounded-2xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-2 rounded-full" style={{background:section.color}}/>
-                    <span className="text-xs text-gray-400 font-body truncate">{section.name}</span>
-                  </div>
-                  <p className="font-display font-black text-xl text-white">{summary}</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">{sub || 'মাসের মোট'}</p>
-                </div>
-              )
-            })}
-          </div>
         </div>
       )}
 
@@ -471,6 +563,23 @@ export default function Dashboard() {
       )}
 
       <AddSectionModal open={showAdd} onClose={() => setShowAdd(false)} lang={lang}/>
+
+      {deleteTarget && (
+        <DeleteConfirm
+          section={deleteTarget}
+          onConfirm={() => handleRemoveSection(deleteTarget.id)}
+          onClose={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {editTarget && (
+        <EditSectionModal
+          section={editTarget}
+          open={!!editTarget}
+          onClose={() => setEditTarget(null)}
+          onSave={handleEditSection}
+        />
+      )}
     </div>
   )
 }
