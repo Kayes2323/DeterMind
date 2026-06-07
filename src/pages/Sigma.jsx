@@ -43,21 +43,6 @@ async function chatWithSigma(messages, lang, contextData) {
   return data.choices?.[0]?.message?.content ?? ''
 }
 
-function playBeep() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const o = ctx.createOscillator()
-    const g = ctx.createGain()
-    o.connect(g)
-    g.connect(ctx.destination)
-    o.frequency.setValueAtTime(880, ctx.currentTime)
-    o.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15)
-    g.gain.setValueAtTime(0.2, ctx.currentTime)
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3)
-    o.start(ctx.currentTime)
-    o.stop(ctx.currentTime + 0.3)
-  } catch(e) {}
-}
 
 const FORMULAS = [
   'E=mc²','∫f(x)dx','F=ma','a²+b²=c²',
@@ -86,7 +71,6 @@ function SigmaLogo({ isTyping }) {
   }, [isTyping])
 
   const triggerBurst = () => {
-    playBeep()
     const picked = [...FORMULAS].sort(() => Math.random() - 0.5).slice(0, 10)
     setFormulas(picked)
     setBurst(true)
