@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard'
 import Todo from './pages/Todo'
 import Routine from './pages/Routine'
 import Sigma from './pages/Sigma'
+import Focus from './pages/Focus'
 import Profile from './pages/Profile'
 
 function AppContent() {
@@ -27,6 +28,7 @@ function AppContent() {
               <Route path="/todo" element={<Todo />} />
               <Route path="/routine" element={<Routine />} />
               <Route path="/sigma" element={<Sigma />} />
+              <Route path="/focus" element={<Focus />} />
               <Route path="/profile" element={<Profile />} />
             </Routes>
           </Layout>
