@@ -83,7 +83,7 @@ function SectionMenu({ section, onEdit, onDelete }) {
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-6 z-20 glass rounded-xl border border-white/10 overflow-hidden w-36 shadow-xl">
+          <div className="absolute right-0 top-6 z-50 glass rounded-xl border border-white/10 overflow-hidden w-36 shadow-xl" style={{position:"absolute"}}>
             <button onClick={() => { onEdit(); setOpen(false) }}
               className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 w-full transition-all">
               <Edit3 size={13} /> Edit

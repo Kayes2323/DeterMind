@@ -1,27 +1,39 @@
 import { useState, useRef, useEffect } from 'react'
 import { useStore } from '../store'
 import { t } from '../utils/helpers'
-import { Send, RotateCcw, Sparkles } from 'lucide-react'
+import { Send, RotateCcw, Sparkles, Calendar } from 'lucide-react'
 import { format } from 'date-fns'
+import { useNavigate } from 'react-router-dom'
+
+function detectRoutine(text) {
+  const lines = text.split('\n').filter(l => l.trim())
+  const timeRegex = /\d{1,2}[:।]\d{2}|\d{1,2}:\d{2}\s*(AM|PM|am|pm)?|সকাল|দুপুর|বিকাল|রাত|ভোর/i
+  const rows = lines.filter(l => timeRegex.test(l) && l.length > 10)
+  if (rows.length < 3) return null
+  const parsedRows = rows.map((line, idx) => {
+    const clean = line.replace(/[|*#]/g, '').trim()
+    const match = clean.match(/(\d{1,2}[:.:]\d{2}\s*(?:AM|PM|am|pm)?|সকাল|দুপুর|বিকাল|রাত)\s*[-–—]?\s*(.+)/)
+    if (match) return { time: match[1].trim(), task: match[2].trim(), duration: '', category: 'study', id: Date.now() + idx }
+    return null
+  }).filter(Boolean)
+  if (parsedRows.length < 3) return null
+  return { title: 'Sigma Routine', goal: 'AI Generated', rows: parsedRows }
+}
 
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY
 
-const SIGMA_SYSTEM = `তুমি Sigma — DeterMind-এর AI mentor। তোমার response style:
-- সর্বোচ্চ ৩-৪ লাইন — এর বেশি না
-- সরাসরি কাজের কথা, ভূমিকা বাদ
-- Bold করো শুধু সবচেয়ে গুরুত্বপূর্ণ point
-- প্রয়োজনে ২-৩টা bullet, তার বেশি না
-- উৎসাহ দাও কিন্তু সত্য বলো
+const SIGMA_SYSTEM = `তুমি Sigma — DeterMind-এর AI mentor। তুমি একজন student-এর personal coach, philosopher, এবং বিশ্বস্ত বন্ধু। তুমি:
+- সংক্ষিপ্ত, কার্যকর পরামর্শ দাও
+- উৎসাহ দাও কিন্তু সত্য কথা বলো
 - বাংলা বা English যেভাবে জিজ্ঞেস করা হয় সেভাবে উত্তর দাও
+- Markdown ব্যবহার করো সুন্দর formatting-এর জন্য
 - Student-এর data দেখে personalized পরামর্শ দাও`
 
-const SIGMA_SYSTEM_EN = `You are Sigma — DeterMind's AI mentor. Your response style:
-- Maximum 3-4 lines — never more
-- Direct and actionable, skip intros
-- Bold only the most critical point
-- 2-3 bullets max if needed
+const SIGMA_SYSTEM_EN = `You are Sigma — DeterMind's AI mentor. You are a student's personal coach, philosopher, and trusted friend. You:
+- Give brief, actionable advice
 - Motivate but speak truth
 - Respond in the language you're asked in
+- Use markdown for beautiful formatting
 - Give personalized advice based on student's data`
 
 async function chatWithSigma(messages, lang, contextData) {
@@ -47,113 +59,15 @@ async function chatWithSigma(messages, lang, contextData) {
   return data.choices?.[0]?.message?.content ?? ''
 }
 
-
-
-const FORMULAS = [
-  'E=mc²','∫f(x)dx','F=ma','a²+b²=c²',
-  'PV=nRT','eⁱᵖ+1=0','λ=h/p','ΔG=ΔH−TΔS',
-  '∑n²','√(-1)=i','v=λf','pH=−log[H⁺]',
-  'sin²+cos²=1','p=mv','W=Fd','n!=n(n-1)!'
-]
-
-const DIRECTIONS = [
-  { x: -60, y: -55 }, { x: 55, y: -60 }, { x: -65, y: 10 }, { x: 65, y: 15 },
-  { x: -40, y: 60 },  { x: 45, y: 58 },  { x: 0, y: -68 },  { x: 70, y: -30 },
-  { x: -70, y: -30 }, { x: 20, y: 70 },  { x: -20, y: 70 }, { x: 72, y: 40 },
-  { x: -72, y: 40 },  { x: 50, y: -45 }, { x: -50, y: 45 }, { x: 60, y: 55 }
-]
-
-function SigmaLogo({ isTyping }) {
-  const [burst, setBurst] = useState(false)
-  const [formulas, setFormulas] = useState([])
-
-  useEffect(() => {
-    if (isTyping) {
-      triggerBurst()
-      const interval = setInterval(triggerBurst, 2200)
-      return () => clearInterval(interval)
-    }
-  }, [isTyping])
-
-  const triggerBurst = () => {
-    const picked = [...FORMULAS].sort(() => Math.random() - 0.5).slice(0, 10)
-    setFormulas(picked)
-    setBurst(true)
-    setTimeout(() => setBurst(false), 1800)
-  }
-
-  return (
-    <div style={{ position: 'relative', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {/* Pulse rings */}
-      {burst && [0,1,2,3].map(i => (
-        <div key={i} style={{
-          position: 'absolute',
-          width: 40, height: 40,
-          borderRadius: '50%',
-          border: '1.5px solid #f97316',
-          animation: `sigPulse 1.8s ease-out ${i * 0.3}s forwards`,
-          opacity: 0,
-          pointerEvents: 'none',
-        }} />
-      ))}
-
-      {/* Flying formulas */}
-      {burst && formulas.map((f, i) => {
-        const dir = DIRECTIONS[i % DIRECTIONS.length]
-        return (
-          <span key={i} style={{
-            position: 'absolute',
-            fontSize: 8,
-            fontWeight: 600,
-            fontFamily: 'serif',
-            color: i % 2 === 0 ? '#f97316' : '#a855f7',
-            whiteSpace: 'nowrap',
-            pointerEvents: 'none',
-            animation: `sigFly 1.6s ease-out ${i * 0.05}s forwards`,
-            opacity: 0,
-            '--dx': dir.x + 'px',
-            '--dy': dir.y + 'px',
-          }}>
-            {f}
-          </span>
-        )
-      })}
-
-      {/* Logo */}
-      <svg width="40" height="40" viewBox="0 0 40 40" style={{ position: 'relative', zIndex: 5 }}>
-        <defs>
-          <linearGradient id="sigGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#f97316"/>
-            <stop offset="100%" stopColor="#7c3aed"/>
-          </linearGradient>
-        </defs>
-        <circle cx="20" cy="20" r="18" fill="none" stroke="url(#sigGrad)" strokeWidth="2.5"/>
-        <circle cx="20" cy="20" r="14" fill="#111"/>
-        <text x="20" y="26" textAnchor="middle" fontSize="16" fontWeight="700" fill="white" fontFamily="serif">Σ</text>
-      </svg>
-
-      <style>{`
-        @keyframes sigPulse {
-          0%   { transform: scale(1); opacity: 0.9; }
-          100% { transform: scale(3); opacity: 0; }
-        }
-        @keyframes sigFly {
-          0%   { opacity: 0; transform: translate(0,0) scale(0.5); }
-          20%  { opacity: 1; }
-          100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1); }
-        }
-      `}</style>
-    </div>
-  )
-}
-
 function TypingIndicator() {
   return (
     <div className="flex items-end gap-3 mb-4">
-      <SigmaLogo isTyping={true} />
+      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/20">
+        <span className="text-white text-xs font-bold font-display">Σ</span>
+      </div>
       <div className="glass rounded-2xl rounded-bl-sm px-4 py-3">
         <div className="flex gap-1 items-center h-4">
-          {[0,1,2].map(i => (
+          {[0, 1, 2].map(i => (
             <div key={i} className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce"
               style={{ animationDelay: `${i * 0.15}s` }} />
           ))}
@@ -163,22 +77,42 @@ function TypingIndicator() {
   )
 }
 
-function MessageBubble({ msg }) {
+function MessageBubble({ msg, onSaveRoutine }) {
   const isUser = msg.role === 'user'
+  const [saved, setSaved] = useState(false)
   return (
     <div className={`flex items-end gap-3 mb-4 ${isUser ? 'flex-row-reverse' : ''}`}>
-      {!isUser && <SigmaLogo isTyping={false} />}
-      <div className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm font-body leading-relaxed ${
-        isUser
-          ? 'gradient-brand text-white rounded-br-sm'
-          : 'glass text-gray-100 rounded-bl-sm border border-white/8'
-      }`}>
-        {msg.content.split('\n').map((line, i) => {
-          const formatted = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-          return line ? (
-            <p key={i} className="mb-1 last:mb-0" dangerouslySetInnerHTML={{ __html: formatted }} />
-          ) : <br key={i} />
-        })}
+      {!isUser && (
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/20">
+          <span className="text-white text-xs font-bold font-display">Σ</span>
+        </div>
+      )}
+      <div className="max-w-[80%] flex flex-col gap-2">
+        <div className={`px-4 py-3 rounded-2xl text-sm font-body leading-relaxed ${
+          isUser
+            ? 'gradient-brand text-white rounded-br-sm'
+            : 'glass text-gray-100 rounded-bl-sm border border-white/8'
+        }`}>
+          {msg.content.split('\n').map((line, i) => {
+            const formatted = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            return line ? (
+              <p key={i} className="mb-1 last:mb-0" dangerouslySetInnerHTML={{ __html: formatted }} />
+            ) : <br key={i} />
+          })}
+        </div>
+        {!isUser && msg.routine && (
+          <button
+            onClick={() => { onSaveRoutine(msg.routine); setSaved(true) }}
+            disabled={saved}
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all w-fit ${
+              saved
+                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                : 'bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30'
+            }`}>
+            <Calendar size={12}/>
+            {saved ? '✅ রুটিনে সংরক্ষিত!' : '📅 রুটিনে Save করো'}
+          </button>
+        )}
       </div>
     </div>
   )
@@ -199,7 +133,13 @@ const QUICK_PROMPTS_EN = [
 ]
 
 export default function Sigma() {
-  const { lang, sections, entries, user } = useStore()
+  const { lang, sections, entries, user, setSavedRoutine } = useStore()
+  const navigate = useNavigate()
+
+  const saveRoutineAndGo = (routine) => {
+    setSavedRoutine(routine)
+    setTimeout(() => navigate('/routine'), 300)
+  }
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -216,6 +156,7 @@ export default function Sigma() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
+  // Welcome message
   useEffect(() => {
     if (messages.length === 0) {
       const hour = new Date().getHours()
@@ -234,13 +175,16 @@ export default function Sigma() {
     const msg = text || input.trim()
     if (!msg || loading) return
     setInput('')
+
     const newMessages = [...messages, { role: 'user', content: msg }]
     setMessages(newMessages)
     setLoading(true)
+
     try {
       const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }))
       const reply = await chatWithSigma(apiMessages, lang, contextData)
-      setMessages([...newMessages, { role: 'assistant', content: reply }])
+      const detectedRoutine = detectRoutine(reply)
+      setMessages([...newMessages, { role: 'assistant', content: reply, routine: detectedRoutine }])
     } catch(e) {
       setMessages([...newMessages, {
         role: 'assistant',
@@ -268,11 +212,12 @@ export default function Sigma() {
   const quickPrompts = lang === 'bn' ? QUICK_PROMPTS_BN : QUICK_PROMPTS_EN
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)] md:h-[calc(100vh-48px)] pb-0">
+    <div className="flex flex-col pb-0" style={{height: "calc(100dvh - 140px)"}}>
+      {/* Header */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-3">
-          <div style={{ position: 'relative' }}>
-            <SigmaLogo isTyping={false} />
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30 relative">
+            <span className="text-white font-bold font-display text-lg">Σ</span>
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-dark-900" />
           </div>
           <div>
@@ -286,14 +231,16 @@ export default function Sigma() {
         </button>
       </div>
 
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto pr-1 mb-3">
         {messages.map((msg, i) => (
-          <MessageBubble key={i} msg={msg} />
+          <MessageBubble key={i} msg={msg} onSaveRoutine={saveRoutineAndGo} />
         ))}
         {loading && <TypingIndicator />}
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Quick prompts */}
       {messages.length <= 1 && !loading && (
         <div className="flex gap-2 mb-3 flex-wrap shrink-0">
           {quickPrompts.map((p, i) => (
@@ -306,13 +253,17 @@ export default function Sigma() {
         </div>
       )}
 
+      {/* Input */}
       <div className="glass rounded-2xl p-2 flex items-end gap-2 border border-white/8 shrink-0">
         <textarea
           ref={inputRef}
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              send()
+            }
           }}
           placeholder={t(lang, 'Sigma-কে কিছু জিজ্ঞেস করো...', 'Ask Sigma anything...')}
           rows={1}
