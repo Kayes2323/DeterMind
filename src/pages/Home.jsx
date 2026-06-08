@@ -8,6 +8,120 @@ import { Flame, Target, Bell, Plus, Trash2, Calendar, Zap, ChevronRight } from '
 
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY
 
+const FORMULAS = [
+  'E=mc²','∫f(x)dx','F=ma','a²+b²=c²',
+  'PV=nRT','eⁱᵖ+1=0','λ=h/p','ΔG=ΔH−TΔS',
+  '∑n²','√(-1)=i','v=λf','pH=−log[H⁺]',
+  'sin²+cos²=1','p=mv','W=Fd','n!=n(n-1)!'
+]
+
+const DIRECTIONS = [
+  { x: -60, y: -55 }, { x: 55, y: -60 }, { x: -65, y: 10 }, { x: 65, y: 15 },
+  { x: -40, y: 60 },  { x: 45, y: 58 },  { x: 0, y: -68 },  { x: 70, y: -30 },
+  { x: -70, y: -30 }, { x: 20, y: 70 },  { x: -20, y: 70 }, { x: 72, y: 40 },
+  { x: -72, y: 40 },  { x: 50, y: -45 }, { x: -50, y: 45 }, { x: 60, y: 55 }
+]
+
+// Sigma.jsx এর same component — সারাক্ষণ burst চলবে
+function HomeSigmaIcon({ onClick }) {
+  const [burst, setBurst] = useState(false)
+  const [formulas, setFormulas] = useState([])
+
+  const triggerBurst = () => {
+    const picked = [...FORMULAS].sort(() => Math.random() - 0.5).slice(0, 10)
+    setFormulas(picked)
+    setBurst(true)
+    setTimeout(() => setBurst(false), 1800)
+  }
+
+  // সারাক্ষণ চলবে — Sigma.jsx এর মতোই
+  useEffect(() => {
+    triggerBurst()
+    const interval = setInterval(triggerBurst, 2200)
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <button
+      onClick={onClick}
+      className="md:hidden active:scale-95 transition-transform"
+      style={{ position: 'fixed', bottom: '88px', right: '16px', zIndex: 40 }}
+    >
+      <div style={{ position: 'relative', width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+
+        {/* Pulse rings — Sigma.jsx এর same */}
+        {burst && [0,1,2,3].map(i => (
+          <div key={i} style={{
+            position: 'absolute',
+            width: 52, height: 52,
+            borderRadius: '50%',
+            border: '1.5px solid #f97316',
+            animation: `sigPulse 1.8s ease-out ${i * 0.3}s forwards`,
+            opacity: 0,
+            pointerEvents: 'none',
+          }}/>
+        ))}
+
+        {/* Flying formulas — Sigma.jsx এর same */}
+        {burst && formulas.map((f, i) => {
+          const dir = DIRECTIONS[i % DIRECTIONS.length]
+          return (
+            <span key={i} style={{
+              position: 'absolute',
+              fontSize: 8,
+              fontWeight: 600,
+              fontFamily: 'serif',
+              color: i % 2 === 0 ? '#f97316' : '#a855f7',
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+              animation: `sigFly 1.6s ease-out ${i * 0.05}s forwards`,
+              opacity: 0,
+              '--dx': dir.x + 'px',
+              '--dy': dir.y + 'px',
+            }}>
+              {f}
+            </span>
+          )
+        })}
+
+        {/* Logo — Sigma.jsx এর same */}
+        <svg width="52" height="52" viewBox="0 0 40 40" style={{ position: 'relative', zIndex: 5 }}>
+          <defs>
+            <linearGradient id="sigHomeGr" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#f97316"/>
+              <stop offset="100%" stopColor="#7c3aed"/>
+            </linearGradient>
+          </defs>
+          <circle cx="20" cy="20" r="18" fill="none" stroke="url(#sigHomeGr)" strokeWidth="2.5"/>
+          <circle cx="20" cy="20" r="14" fill="#111"/>
+          <text x="20" y="26" textAnchor="middle" fontSize="16" fontWeight="700" fill="white" fontFamily="serif">Σ</text>
+        </svg>
+
+        {/* Green dot */}
+        <div style={{
+          position: 'absolute', bottom: 1, right: 1,
+          width: 10, height: 10, borderRadius: '50%',
+          background: '#22c55e', border: '2px solid #0a0a0f', zIndex: 6,
+        }}/>
+
+        <style>{`
+          @keyframes sigPulse {
+            0%   { transform: scale(1); opacity: 0.9; }
+            100% { transform: scale(3); opacity: 0; }
+          }
+          @keyframes sigFly {
+            0%   { opacity: 0; transform: translate(0,0) scale(0.5); }
+            20%  { opacity: 1; }
+            100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1); }
+          }
+        `}</style>
+      </div>
+    </button>
+  )
+}
+
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY
+
 async function getAIFeedback(todayData, yesterdayData, sections, lang) {
   if (!sections.length) return null
   try {
@@ -260,83 +374,6 @@ export default function Home() {
       </div>
 
       <AddExamModal open={showAddExam} onClose={() => setShowAddExam(false)} lang={lang} />
-
-      {/* Sigma floating button — সারাক্ষণ animate করবে */}
-      <button
-        onClick={() => navigate('/sigma')}
-        className="md:hidden active:scale-95 transition-transform"
-        style={{ position: 'fixed', bottom: '88px', right: '16px', zIndex: 40 }}
-      >
-        <style>{`
-          @keyframes sigHomeOrbit {
-            from { transform: translate(-50%,-50%) rotate(0deg); }
-            to   { transform: translate(-50%,-50%) rotate(360deg); }
-          }
-          @keyframes sigHomePulse {
-            0%,100% { transform: scale(1); opacity: 0.7; }
-            50%      { transform: scale(1.6); opacity: 0; }
-          }
-        `}</style>
-
-        <div style={{ position: 'relative', width: 56, height: 56 }}>
-
-          {/* Pulse rings সারাক্ষণ */}
-          {[0,1,2].map(i => (
-            <div key={i} style={{
-              position: 'absolute', inset: 0,
-              borderRadius: '50%',
-              border: '1.5px solid #f97316',
-              animation: `sigHomePulse 2.4s ease-out ${i * 0.8}s infinite`,
-              pointerEvents: 'none',
-            }}/>
-          ))}
-
-          {/* Orbiting formulas সারাক্ষণ */}
-          <div style={{
-            position: 'absolute', top: '50%', left: '50%',
-            width: 80, height: 80,
-            animation: 'sigHomeOrbit 5s linear infinite',
-            pointerEvents: 'none',
-          }}>
-            {['E=mc²','∫dx','F=ma','π²'].map((f, i) => {
-              const angle = (i / 4) * 360
-              const rad = angle * Math.PI / 180
-              const x = 38 * Math.cos(rad)
-              const y = 38 * Math.sin(rad)
-              return (
-                <span key={i} style={{
-                  position: 'absolute',
-                  left: '50%', top: '50%',
-                  transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) rotate(${-angle}deg)`,
-                  fontSize: 7, fontWeight: 700, fontFamily: 'serif',
-                  color: i % 2 === 0 ? '#f97316' : '#a855f7',
-                  whiteSpace: 'nowrap', opacity: 0.85,
-                }}>{f}</span>
-              )
-            })}
-          </div>
-
-          {/* Logo */}
-          <svg width="56" height="56" viewBox="0 0 56 56" style={{ position: 'relative', zIndex: 5 }}>
-            <defs>
-              <linearGradient id="sigHomeGr" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#f97316"/>
-                <stop offset="100%" stopColor="#7c3aed"/>
-              </linearGradient>
-            </defs>
-            <circle cx="28" cy="28" r="26" fill="none" stroke="url(#sigHomeGr)" strokeWidth="2.5"/>
-            <circle cx="28" cy="28" r="21" fill="#111"/>
-            <text x="28" y="35" textAnchor="middle" fontSize="20" fontWeight="700" fill="white" fontFamily="serif">Σ</text>
-          </svg>
-
-          {/* Green dot */}
-          <div style={{
-            position: 'absolute', bottom: 2, right: 2,
-            width: 10, height: 10, borderRadius: '50%',
-            background: '#22c55e', border: '2px solid #0a0a0f', zIndex: 6,
-          }}/>
-        </div>
-      </button>
     </div>
   )
 }
