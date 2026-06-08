@@ -120,8 +120,6 @@ function HomeSigmaIcon({ onClick }) {
   )
 }
 
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY
-
 async function getAIFeedback(todayData, yesterdayData, sections, lang) {
   if (!sections.length) return null
   try {
@@ -374,6 +372,7 @@ export default function Home() {
       </div>
 
       <AddExamModal open={showAddExam} onClose={() => setShowAddExam(false)} lang={lang} />
+      <HomeSigmaIcon onClick={() => navigate('/sigma')} />
     </div>
   )
 }
