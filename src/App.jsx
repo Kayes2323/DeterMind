@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useStore } from './store'
 import { supabase } from './lib/supabase'
 import { useSupabaseSync } from './hooks/useSupabase'
+import { useSmartNotification } from './hooks/useNotification'
 import Layout from './components/layout/Layout'
 import Auth from './pages/Auth'
 import Home from './pages/Home'
@@ -15,6 +16,7 @@ import Profile from './pages/Profile'
 
 function AppContent() {
   useSupabaseSync()
+  useSmartNotification()
   const { user } = useStore()
   return (
     <Routes>
