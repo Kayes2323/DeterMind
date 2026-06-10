@@ -282,8 +282,8 @@ function MonthlyTable({ sections, entries, onCellClick, month }) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-white/8">
       <table className="w-full text-xs border-collapse" style={{minWidth: sections.length>3?`${sections.length*110+80}px`:'100%'}}>
-        <thead>
-          <tr className="bg-white/5 border-b border-white/8">
+        <thead className="sticky top-0 z-20">
+          <tr className="bg-dark-800 border-b border-white/8">
             <th className="px-3 py-3 text-left text-gray-400 font-medium sticky left-0 bg-dark-800 z-10 w-16">তারিখ</th>
             {sections.map(s => (
               <th key={s.id} className="px-3 py-3 text-center font-medium" style={{color:s.color, minWidth:100}}>

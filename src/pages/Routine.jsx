@@ -307,7 +307,7 @@ function TodoSection({ lang }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function Routine() {
   const { lang } = useStore()
-  const [tab, setTab] = useState('routine')
+  const [tab, setTab] = useState('todo')
 
   return (
     <div className="pb-20 md:pb-6">
