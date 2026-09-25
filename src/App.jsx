@@ -1,4 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { useEffect } from 'react'
+import { useStore } from './store'
+import { ensureAnonymousUser } from './lib/firebase'
 import { useSmartNotification } from './hooks/useNotification'
 import Layout from './components/layout/Layout'
 import Home from './pages/Home'
@@ -11,6 +14,16 @@ import Profile from './pages/Profile'
 
 function AppContent() {
   useSmartNotification()
+  const { setUser } = useStore()
+
+  // Silent per-device sign-in (no login screen) so local data also gets an
+  // optional Firestore backup — see src/lib/firebase.js and useCloudSync.js.
+  useEffect(() => {
+    ensureAnonymousUser().then(fbUser => {
+      if (fbUser) setUser({ id: fbUser.uid })
+    })
+  }, [])
+
   return (
     <Layout>
       <Routes>

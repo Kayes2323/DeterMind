@@ -8,7 +8,7 @@ import {
 } from 'recharts'
 import { Plus, MoreVertical, BarChart2, Table, Activity, TrendingUp, TrendingDown, Minus, Edit3, Trash2 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns'
-import { dbAddSection, dbDeleteSection, dbSetEntry } from '../hooks/useSupabase'
+import { dbAddSection, dbDeleteSection, dbSetEntry } from '../hooks/useCloudSync'
 
 const DATA_TYPES = [
   { value: 'number', label: 'সংখ্যা — যেমন: ৬ ঘণ্টা' },

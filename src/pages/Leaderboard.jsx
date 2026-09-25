@@ -96,7 +96,7 @@ export default function Leaderboard() {
             })}
           </div>
           <p className="text-xs text-gray-600 text-center mt-4 font-body">
-            {t(lang,'* Demo data। Real data Supabase sync-এর পর আসবে','* Demo data. Real data after Supabase sync')}
+            {t(lang,'* Demo data। Real data cloud sync-এর পর আসবে','* Demo data. Real data after cloud sync')}
           </p>
         </div>
       )}

@@ -222,7 +222,7 @@ export default function Profile() {
           <Card>
             <h3 className="font-display font-bold text-white mb-3">Tech Stack</h3>
             <div className="flex flex-wrap gap-2">
-              {['React','Supabase','Gemini AI','Tailwind CSS','Vercel'].map(t => (
+              {['React','Firebase','Gemini AI','Tailwind CSS','Vercel'].map(t => (
                 <span key={t} className="glass px-3 py-1 rounded-lg text-xs text-gray-400">{t}</span>
               ))}
             </div>

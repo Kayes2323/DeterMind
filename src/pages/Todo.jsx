@@ -3,8 +3,8 @@ import { useStore } from '../store'
 import { t } from '../utils/helpers'
 import { format, subDays, addDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns'
 import { Plus, Check, Trash2, ChevronLeft, ChevronRight, Sparkles, X } from 'lucide-react'
-import { supabase } from '../lib/supabase'
 import { chatWithGemini } from '../lib/gemini'
+import { dbLoadTodos, dbSaveTodo, dbToggleTodo, dbDeleteTodo, dbSaveReason } from '../hooks/useCloudSync'
 
 const PRIORITIES = [
   { value: 'high', emoji: '🔴', label: 'জরুরি' },
@@ -18,29 +18,6 @@ const TIME_SLOTS = [
   { key: 'evening', emoji: '🌆', label: 'বিকাল', labelEn: 'Evening' },
   { key: 'night', emoji: '🌙', label: 'রাত', labelEn: 'Night' },
 ]
-
-// ─── Supabase ─────────────────────────────────────────────────────────────────
-async function dbLoadTodos(userId) {
-  const { data } = await supabase.from('todos').select('*').eq('user_id', userId).order('created_at')
-  return data || []
-}
-async function dbSaveTodo(userId, todo) {
-  const { data } = await supabase.from('todos').insert({
-    user_id: userId, date: todo.date, text: todo.text,
-    done: false, progress: 0, reason: '',
-    time: todo.time || '', priority: todo.priority || 'mid', slot: todo.slot || 'morning'
-  }).select().single()
-  return data
-}
-async function dbToggleTodo(id, done) {
-  await supabase.from('todos').update({ done }).eq('id', id)
-}
-async function dbDeleteTodo(id) {
-  await supabase.from('todos').delete().eq('id', id)
-}
-async function dbSaveReason(id, reason, progress) {
-  await supabase.from('todos').update({ reason, progress }).eq('id', id)
-}
 
 // ─── Sigma Analysis ───────────────────────────────────────────────────────────
 async function getSigmaAnalysis(todos, trackerEntries, sections, lang, date) {
