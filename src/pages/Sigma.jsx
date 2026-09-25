@@ -4,6 +4,7 @@ import { t } from '../utils/helpers'
 import { Send, RotateCcw, Sparkles, Calendar } from 'lucide-react'
 import { format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
+import { chatWithGemini } from '../lib/gemini'
 
 function detectRoutine(text) {
   const lines = text.split('\n').filter(l => l.trim())
@@ -19,8 +20,6 @@ function detectRoutine(text) {
   if (parsedRows.length < 3) return null
   return { title: 'Sigma Routine', goal: 'AI Generated', rows: parsedRows }
 }
-
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY
 
 const SIGMA_SYSTEM = `You are Sigma — the AI mentor of DeterMind. You help students achieve their goals.
 
@@ -41,30 +40,8 @@ Your style:
 - Give personalized advice based on student data`
 
 async function chatWithSigma(messages, lang, contextData) {
-  if (!GROQ_API_KEY) throw new Error('VITE_GROQ_API_KEY সেট করা নেই')
-
   const systemPrompt = SIGMA_SYSTEM + (contextData ? `\n\nStudent today's data: ${contextData}` : '')
-
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + GROQ_API_KEY,
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      max_tokens: 1000,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...messages
-      ],
-    }),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error?.message || `Groq API error (${res.status})`)
-  const content = data.choices?.[0]?.message?.content
-  if (!content) throw new Error('Sigma-র কোনো response পাওয়া যায়নি')
-  return content
+  return chatWithGemini(messages, systemPrompt)
 }
 
 const FORMULAS = [

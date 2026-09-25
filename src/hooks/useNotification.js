@@ -2,11 +2,10 @@ import { useEffect } from 'react'
 import { useStore } from '../store'
 import { today, calcDailyScore } from '../utils/helpers'
 import { format, subDays } from 'date-fns'
-
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY
+import { chatWithGemini } from '../lib/gemini'
 
 async function generateSmartNotification(todayData, yesterdayData, sections, lang) {
-  if (!sections.length || !GROQ_API_KEY) return null
+  if (!sections.length) return null
   try {
     const todayStr = sections.map(s => `${s.name}: ${todayData?.[s.id] || 'নেই'} ${s.unit||''}`).join(', ')
     const yesterdayStr = sections.map(s => `${s.name}: ${yesterdayData?.[s.id] || 'নেই'} ${s.unit||''}`).join(', ')
@@ -17,24 +16,13 @@ async function generateSmartNotification(todayData, yesterdayData, sections, lan
       ? `গতকাল: ${yesterdayStr} (score: ${yesterdayScore})\nআজ: ${todayStr} (score: ${todayScore})\n\nএকটি ছোট notification message লেখো (১ লাইন, ৮০ character-এর মধ্যে)। শুধু message, আর কিছু না।`
       : `Yesterday: ${yesterdayStr} (score: ${yesterdayScore})\nToday: ${todayStr} (score: ${todayScore})\n\nWrite one short notification message (1 line, under 80 chars). Just the message, nothing else.`
 
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + GROQ_API_KEY,
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 100,
-        messages: [
-          { role: 'system', content: 'You are a student coach. Write very short, motivating notification messages.' },
-          { role: 'user', content: prompt }
-        ],
-      }),
-    })
-    const data = await res.json()
-    return data.choices?.[0]?.message?.content?.trim() ?? null
+    const reply = await chatWithGemini(
+      [{ role: 'user', content: prompt }],
+      'You are a student coach. Write very short, motivating notification messages.'
+    )
+    return reply.trim() || null
   } catch(e) {
+    console.error('Smart notification error:', e)
     return null
   }
 }

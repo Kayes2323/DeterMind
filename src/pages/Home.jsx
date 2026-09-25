@@ -5,8 +5,7 @@ import { today, calcStreak, calcDailyScore, t } from '../utils/helpers'
 import { format, differenceInDays, parseISO, subDays } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { Flame, Target, Bell, Plus, Trash2, Calendar, Zap, ChevronRight } from 'lucide-react'
-
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY
+import { chatWithGemini } from '../lib/gemini'
 
 async function getAIFeedback(todayData, yesterdayData, sections, lang) {
   if (!sections.length) return null
@@ -24,24 +23,10 @@ async function getAIFeedback(todayData, yesterdayData, sections, lang) {
       ? `গতকালের data: ${yesterdayStr}\nআজকের data: ${todayStr}\n\nএই data বিশ্লেষণ করে ২-৩ লাইনের একটি উৎসাহমূলক feedback দাও। কী ভালো হয়েছে, কী উন্নতি করা দরকার সেটা বলো। সহজ বাংলায় লেখো।`
       : `Yesterday: ${yesterdayStr}\nToday: ${todayStr}\n\nAnalyze this data and give 2-3 lines of encouraging feedback. Mention what improved and what needs work. Keep it simple and motivating.`
 
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + GROQ_API_KEY,
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 200,
-        messages: [
-          { role: 'system', content: lang === 'bn' ? 'তুমি একজন friendly student coach। সংক্ষিপ্ত, উৎসাহমূলক feedback দাও।' : 'You are a friendly student coach. Give brief, motivating feedback.' },
-          { role: 'user', content: prompt }
-        ],
-      }),
-    })
-    const data = await res.json()
-    return data.choices?.[0]?.message?.content ?? null
+    const systemPrompt = lang === 'bn' ? 'তুমি একজন friendly student coach। সংক্ষিপ্ত, উৎসাহমূলক feedback দাও।' : 'You are a friendly student coach. Give brief, motivating feedback.'
+    return await chatWithGemini([{ role: 'user', content: prompt }], systemPrompt)
   } catch(e) {
+    console.error('AI feedback error:', e)
     return null
   }
 }
@@ -119,7 +104,7 @@ export default function Home() {
 
   // Load AI feedback on mount
   useEffect(() => {
-    if (!sections.length || !GROQ_API_KEY) return
+    if (!sections.length) return
     const cached = sessionStorage.getItem('ai-feedback-' + todayKey)
     if (cached) { setAiMessage(cached); return }
 
