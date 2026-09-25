@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useStore } from '../store/store-index'
+import { useStore } from '../store'
 import { Card, Badge } from '../components/ui'
 import { t } from '../utils/helpers'
 import { Trophy, Medal, Star, Users, Globe, Crown } from 'lucide-react'
@@ -24,7 +24,7 @@ const BADGES_INFO = [
 ]
 
 export default function Leaderboard() {
-  const { user, lang } = useStore()
+  const { displayName, lang } = useStore()
   const [tab, setTab] = useState('national')
 
   return (
@@ -73,7 +73,7 @@ export default function Leaderboard() {
           {/* Full list */}
           <div className="flex flex-col gap-2">
             {MOCK_NATIONAL.map((u, idx) => {
-              const isMe = u.name === user?.name
+              const isMe = u.name === displayName
               const rankColors = ['text-yellow-400','text-gray-300','text-orange-400']
               return (
                 <div key={u.id} className={`flex items-center gap-3 p-4 glass rounded-2xl transition-all ${isMe?'border border-orange-500/40 bg-orange-500/5':''}`}>

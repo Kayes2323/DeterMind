@@ -102,7 +102,7 @@ function AddExamModal({ open, onClose, lang }) {
 }
 
 export default function Home() {
-  const { user, userGoal, setUserGoal, exams, removeExam, entries, sections, lang } = useStore()
+  const { displayName, userGoal, setUserGoal, exams, removeExam, entries, sections, lang } = useStore()
   const [showAddExam, setShowAddExam] = useState(false)
   const [editGoal, setEditGoal] = useState(false)
   const [goalDraft, setGoalDraft] = useState(userGoal)
@@ -140,17 +140,14 @@ export default function Home() {
         <div>
           <p className="text-gray-500 text-sm font-body">{format(new Date(), 'EEEE, dd MMMM yyyy')}</p>
           <h1 className="font-display text-2xl font-bold text-white mt-0.5">
-            {t(lang,'স্বাগতম','Welcome')}, {user?.name?.split(' ')[0]} 👋
+            {t(lang,'স্বাগতম','Welcome')}{displayName ? `, ${displayName.split(' ')[0]}` : ''} 👋
           </h1>
         </div>
         <button onClick={() => navigate('/profile')}
           className="w-10 h-10 rounded-full overflow-hidden border-2 border-orange-500/40">
-          {user?.avatar
-            ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
-            : <div className="w-full h-full gradient-brand flex items-center justify-center text-white font-bold font-display text-sm">
-                {user?.name?.[0]?.toUpperCase() || 'D'}
-              </div>
-          }
+          <div className="w-full h-full gradient-brand flex items-center justify-center text-white font-bold font-display text-sm">
+            {displayName?.[0]?.toUpperCase() || 'D'}
+          </div>
         </button>
       </div>
 

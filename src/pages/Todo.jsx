@@ -281,8 +281,7 @@ function TaskItem({ todo, onToggle, onDelete, onReason, lang, isPast }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function Todo() {
-  const { lang, sections, entries, user } = useStore()
-  const [todos, setTodos] = useState([])
+  const { lang, sections, entries, user, todos, setTodos, addTodo, updateTodo, removeTodo } = useStore()
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [showAdd, setShowAdd] = useState(false)
   const [reasonTodo, setReasonTodo] = useState(null)
@@ -290,20 +289,27 @@ export default function Todo() {
   const [sigmaLoading, setSigmaLoading] = useState(false)
   const [view, setView] = useState('day')
 
-  // Load from Supabase on mount
+  // Pull in cloud todos on top of local ones, only when logged in
   useEffect(() => {
     if (!user?.id) return
-    dbLoadTodos(user.id).then(data => setTodos(data.map(t => ({
-      id: t.id, date: t.date, text: t.text, done: t.done,
-      time: t.time || '', priority: t.priority || 'mid',
-      slot: t.slot || 'morning', progress: t.progress || 0, reason: t.reason || ''
-    }))))
+    dbLoadTodos(user.id).then(data => {
+      const grouped = {}
+      for (const t of data) {
+        if (!grouped[t.date]) grouped[t.date] = []
+        grouped[t.date].push({
+          id: t.id, text: t.text, done: t.done,
+          time: t.time || '', priority: t.priority || 'mid',
+          slot: t.slot || 'morning', progress: t.progress || 0, reason: t.reason || ''
+        })
+      }
+      setTodos(grouped)
+    })
   }, [user?.id])
 
   const today = format(new Date(), 'yyyy-MM-dd')
   const isToday = selectedDate === today
   const isPast = selectedDate < today
-  const todosForDay = todos.filter(t => t.date === selectedDate)
+  const todosForDay = todos[selectedDate] || []
   const trackerData = entries[selectedDate] || {}
   const doneCount = todosForDay.filter(t => t.done).length
 
@@ -315,30 +321,33 @@ export default function Todo() {
     setSigmaLoading(true)
     getSigmaAnalysis(todosForDay, trackerData, sections, lang, selectedDate)
       .then(msg => { setSigmaMsg(msg || ''); setSigmaLoading(false) })
-  }, [selectedDate, todos.length, doneCount])
+  }, [selectedDate, todosForDay.length, doneCount])
 
   const handleAdd = async (taskData) => {
+    const { date, ...rest } = taskData
+    let id = Date.now()
     if (user?.id) {
-      const saved = await dbSaveTodo(user.id, taskData)
-      if (saved) setTodos(prev => [...prev, { ...taskData, id: saved.id, done: false, progress: 0, reason: '' }])
-    } else {
-      setTodos(prev => [...prev, { ...taskData, id: Date.now(), done: false, progress: 0, reason: '' }])
+      try {
+        const saved = await dbSaveTodo(user.id, taskData)
+        if (saved?.id) id = saved.id
+      } catch (e) { console.error(e) }
     }
+    addTodo(date, { ...rest, id, done: false, progress: 0, reason: '' })
   }
 
   const handleToggle = async (id, done) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, done } : t))
-    if (user?.id) await dbToggleTodo(id, done)
+    updateTodo(selectedDate, id, { done })
+    if (user?.id) { try { await dbToggleTodo(id, done) } catch (e) { console.error(e) } }
   }
 
   const handleDelete = async (id) => {
-    setTodos(prev => prev.filter(t => t.id !== id))
-    if (user?.id) await dbDeleteTodo(id)
+    removeTodo(selectedDate, id)
+    if (user?.id) { try { await dbDeleteTodo(id) } catch (e) { console.error(e) } }
   }
 
   const handleSaveReason = async (id, reason, progress) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, reason, progress } : t))
-    if (user?.id) await dbSaveReason(id, reason, progress)
+    updateTodo(selectedDate, id, { reason, progress })
+    if (user?.id) { try { await dbSaveReason(id, reason, progress) } catch (e) { console.error(e) } }
   }
 
   // Week strip
@@ -377,7 +386,7 @@ export default function Todo() {
             {weekDays.map(d => {
               const isSelected = d === selectedDate
               const isTodayD = d === today
-              const dayTodos = todos.filter(t => t.date === d)
+              const dayTodos = todos[d] || []
               const hasDone = dayTodos.some(t => t.done)
               const hasUndone = dayTodos.some(t => !t.done)
               return (
@@ -508,7 +517,7 @@ export default function Todo() {
             {Array.from({ length: monthDays[0].getDay() }, (_, i) => <div key={'e' + i} />)}
             {monthDays.map(day => {
               const dKey = format(day, 'yyyy-MM-dd')
-              const dayTodos = todos.filter(t => t.date === dKey)
+              const dayTodos = todos[dKey] || []
               const done = dayTodos.filter(t => t.done).length
               const total = dayTodos.length
               const isSelected = dKey === selectedDate

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { useStore } from '../store/store-index'
+import { useStore } from '../store'
 
 // ─── Sections ────────────────────────────────────────────────────────────────
 export async function dbAddSection(userId, section) {

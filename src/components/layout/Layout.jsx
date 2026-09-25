@@ -44,7 +44,7 @@ const navItems = [
 ]
 
 export default function Layout({ children }) {
-  const { lang, setLang, user, logout } = useStore()
+  const { lang, setLang, displayName } = useStore()
   const navigate = useNavigate()
 
   return (
@@ -81,28 +81,18 @@ export default function Layout({ children }) {
           <button onClick={() => navigate('/profile')}
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-white/5 transition-all mb-2">
             <div className="w-8 h-8 rounded-full overflow-hidden border border-orange-500/30 shrink-0">
-              {user?.avatar
-                ? <img src={user.avatar} alt="" className="w-full h-full object-cover"/>
-                : <div className="w-full h-full gradient-brand flex items-center justify-center text-white text-xs font-bold font-display">
-                    {user?.name?.[0]?.toUpperCase()||'D'}
-                  </div>
-              }
+              <div className="w-full h-full gradient-brand flex items-center justify-center text-white text-xs font-bold font-display">
+                {displayName?.[0]?.toUpperCase() || 'D'}
+              </div>
             </div>
             <div className="text-left flex-1 min-w-0">
-              <p className="text-xs font-medium text-white truncate">{user?.name}</p>
-              <p className="text-[10px] text-gray-500 truncate">{user?.email}</p>
+              <p className="text-xs font-medium text-white truncate">{displayName || (lang === 'bn' ? 'তুমি' : 'You')}</p>
             </div>
           </button>
-          <div className="flex gap-2">
-            <button onClick={() => setLang(lang === 'bn' ? 'en' : 'bn')}
-              className="flex-1 glass rounded-xl py-1.5 text-xs text-gray-400 hover:text-white transition-all text-center font-mono">
-              {lang === 'bn' ? 'EN' : 'বাং'}
-            </button>
-            <button onClick={() => { logout(); navigate('/auth') }}
-              className="flex-1 glass rounded-xl py-1.5 text-xs text-gray-500 hover:text-red-400 transition-all text-center">
-              Logout
-            </button>
-          </div>
+          <button onClick={() => setLang(lang === 'bn' ? 'en' : 'bn')}
+            className="w-full glass rounded-xl py-1.5 text-xs text-gray-400 hover:text-white transition-all text-center font-mono">
+            {lang === 'bn' ? 'EN' : 'বাং'}
+          </button>
         </div>
       </aside>
 
@@ -132,12 +122,9 @@ export default function Layout({ children }) {
             {/* Profile avatar top right */}
             <button onClick={() => navigate('/profile')}
               className="w-9 h-9 rounded-full overflow-hidden border-2 border-orange-500/40 active:scale-95 transition-all">
-              {user?.avatar
-                ? <img src={user.avatar} alt="" className="w-full h-full object-cover"/>
-                : <div className="w-full h-full gradient-brand flex items-center justify-center text-white text-sm font-bold font-display">
-                    {user?.name?.[0]?.toUpperCase()||'D'}
-                  </div>
-              }
+              <div className="w-full h-full gradient-brand flex items-center justify-center text-white text-sm font-bold font-display">
+                {displayName?.[0]?.toUpperCase() || 'D'}
+              </div>
             </button>
           </div>
         </div>
