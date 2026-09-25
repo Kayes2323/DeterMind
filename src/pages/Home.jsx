@@ -5,8 +5,7 @@ import { today, calcStreak, calcDailyScore, t } from '../utils/helpers'
 import { format, differenceInDays, parseISO, subDays } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { Flame, Target, Bell, Plus, Trash2, Calendar, Zap, ChevronRight } from 'lucide-react'
-
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY
+import { chatWithGemini } from '../lib/gemini'
 
 async function getAIFeedback(todayData, yesterdayData, sections, lang) {
   if (!sections.length) return null
@@ -24,24 +23,10 @@ async function getAIFeedback(todayData, yesterdayData, sections, lang) {
       ? `গতকালের data: ${yesterdayStr}\nআজকের data: ${todayStr}\n\nএই data বিশ্লেষণ করে ২-৩ লাইনের একটি উৎসাহমূলক feedback দাও। কী ভালো হয়েছে, কী উন্নতি করা দরকার সেটা বলো। সহজ বাংলায় লেখো।`
       : `Yesterday: ${yesterdayStr}\nToday: ${todayStr}\n\nAnalyze this data and give 2-3 lines of encouraging feedback. Mention what improved and what needs work. Keep it simple and motivating.`
 
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + GROQ_API_KEY,
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 200,
-        messages: [
-          { role: 'system', content: lang === 'bn' ? 'তুমি একজন friendly student coach। সংক্ষিপ্ত, উৎসাহমূলক feedback দাও।' : 'You are a friendly student coach. Give brief, motivating feedback.' },
-          { role: 'user', content: prompt }
-        ],
-      }),
-    })
-    const data = await res.json()
-    return data.choices?.[0]?.message?.content ?? null
+    const systemPrompt = lang === 'bn' ? 'তুমি একজন friendly student coach। সংক্ষিপ্ত, উৎসাহমূলক feedback দাও।' : 'You are a friendly student coach. Give brief, motivating feedback.'
+    return await chatWithGemini([{ role: 'user', content: prompt }], systemPrompt)
   } catch(e) {
+    console.error('AI feedback error:', e)
     return null
   }
 }
@@ -102,7 +87,7 @@ function AddExamModal({ open, onClose, lang }) {
 }
 
 export default function Home() {
-  const { user, userGoal, setUserGoal, exams, removeExam, entries, sections, lang } = useStore()
+  const { displayName, userGoal, setUserGoal, exams, removeExam, entries, sections, lang } = useStore()
   const [showAddExam, setShowAddExam] = useState(false)
   const [editGoal, setEditGoal] = useState(false)
   const [goalDraft, setGoalDraft] = useState(userGoal)
@@ -119,7 +104,7 @@ export default function Home() {
 
   // Load AI feedback on mount
   useEffect(() => {
-    if (!sections.length || !GROQ_API_KEY) return
+    if (!sections.length) return
     const cached = sessionStorage.getItem('ai-feedback-' + todayKey)
     if (cached) { setAiMessage(cached); return }
 
@@ -140,17 +125,14 @@ export default function Home() {
         <div>
           <p className="text-gray-500 text-sm font-body">{format(new Date(), 'EEEE, dd MMMM yyyy')}</p>
           <h1 className="font-display text-2xl font-bold text-white mt-0.5">
-            {t(lang,'স্বাগতম','Welcome')}, {user?.name?.split(' ')[0]} 👋
+            {t(lang,'স্বাগতম','Welcome')}{displayName ? `, ${displayName.split(' ')[0]}` : ''} 👋
           </h1>
         </div>
         <button onClick={() => navigate('/profile')}
           className="w-10 h-10 rounded-full overflow-hidden border-2 border-orange-500/40">
-          {user?.avatar
-            ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
-            : <div className="w-full h-full gradient-brand flex items-center justify-center text-white font-bold font-display text-sm">
-                {user?.name?.[0]?.toUpperCase() || 'D'}
-              </div>
-          }
+          <div className="w-full h-full gradient-brand flex items-center justify-center text-white font-bold font-display text-sm">
+            {displayName?.[0]?.toUpperCase() || 'D'}
+          </div>
         </button>
       </div>
 

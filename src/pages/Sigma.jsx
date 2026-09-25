@@ -4,6 +4,7 @@ import { t } from '../utils/helpers'
 import { Send, RotateCcw, Sparkles, Calendar } from 'lucide-react'
 import { format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
+import { chatWithGemini } from '../lib/gemini'
 
 function detectRoutine(text) {
   const lines = text.split('\n').filter(l => l.trim())
@@ -19,8 +20,6 @@ function detectRoutine(text) {
   if (parsedRows.length < 3) return null
   return { title: 'Sigma Routine', goal: 'AI Generated', rows: parsedRows }
 }
-
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY
 
 const SIGMA_SYSTEM = `You are Sigma — the AI mentor of DeterMind. You help students achieve their goals.
 
@@ -42,24 +41,7 @@ Your style:
 
 async function chatWithSigma(messages, lang, contextData) {
   const systemPrompt = SIGMA_SYSTEM + (contextData ? `\n\nStudent today's data: ${contextData}` : '')
-
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + GROQ_API_KEY,
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      max_tokens: 1000,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...messages
-      ],
-    }),
-  })
-  const data = await res.json()
-  return data.choices?.[0]?.message?.content ?? ''
+  return chatWithGemini(messages, systemPrompt)
 }
 
 const FORMULAS = [
@@ -222,7 +204,7 @@ const QUICK_PROMPTS_EN = [
 ]
 
 export default function Sigma() {
-  const { lang, sections, entries, user, setSavedRoutine } = useStore()
+  const { lang, sections, entries, displayName, setSavedRoutine } = useStore()
   const navigate = useNavigate()
 
   const saveRoutineAndGo = (routine) => {
@@ -252,7 +234,7 @@ export default function Sigma() {
       const greeting = hour < 12 ? (lang === 'bn' ? 'সুপ্রভাত' : 'Good morning') :
         hour < 17 ? (lang === 'bn' ? 'শুভ অপরাহ্ন' : 'Good afternoon') :
         (lang === 'bn' ? 'শুভ সন্ধ্যা' : 'Good evening')
-      const name = user?.name?.split(' ')[0] || ''
+      const name = displayName?.split(' ')[0] || ''
       const welcome = lang === 'bn'
         ? `${greeting}, ${name}! আমি **Sigma** — তোমার AI mentor। আমাকে যেকোনো কিছু জিজ্ঞেস করো — পড়াশোনা, রুটিন, motivation, বা জীবনের যেকোনো বিষয়ে। 🔥`
         : `${greeting}, ${name}! I'm **Sigma** — your AI mentor. Ask me anything — studies, routine, motivation, or anything in life. 🔥`
@@ -273,9 +255,10 @@ export default function Sigma() {
       const detectedRoutine = detectRoutine(reply)
       setMessages([...newMessages, { role: 'assistant', content: reply, routine: detectedRoutine }])
     } catch(e) {
+      console.error('Sigma chat error:', e)
       setMessages([...newMessages, {
         role: 'assistant',
-        content: lang === 'bn' ? 'দুঃখিত, সমস্যা হয়েছে। আবার চেষ্টা করো।' : 'Sorry, something went wrong. Please try again.'
+        content: lang === 'bn' ? `দুঃখিত, সমস্যা হয়েছে (${e.message})। আবার চেষ্টা করো।` : `Sorry, something went wrong (${e.message}). Please try again.`
       }])
     } finally {
       setLoading(false)

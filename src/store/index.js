@@ -4,10 +4,14 @@ import { persist } from 'zustand/middleware'
 export const useStore = create(
   persist(
     (set, get) => ({
-      // Auth
+      // Auth (kept for optional future cloud sync; unused without login)
       user: null,
       setUser: (user) => set({ user }),
       logout: () => set({ user: null }),
+
+      // Local display name (no login needed)
+      displayName: '',
+      setDisplayName: (displayName) => set({ displayName }),
 
       // Language
       lang: 'bn',

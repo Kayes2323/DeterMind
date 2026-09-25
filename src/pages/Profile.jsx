@@ -1,12 +1,9 @@
 import { useState } from 'react'
 import { useStore } from '../store'
-import { Card, Badge, Button, Input } from '../components/ui'
+import { Card, Badge } from '../components/ui'
 import { t, calcStreak, calcDailyScore, getLast30Days, today } from '../utils/helpers'
-import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { dbSaveProfile } from '../hooks/useSupabase'
 import {
-  LogOut, Bell, User, Target, Flame, BarChart2,
+  Bell, User, Target, Flame, BarChart2,
   CheckSquare, Edit3, Save, Shield, Info, Star,
   ChevronRight, Award
 } from 'lucide-react'
@@ -22,12 +19,10 @@ const BADGES = [
 ]
 
 export default function Profile() {
-  const { user, logout, lang, setLang, sections, entries, notifications, markAllRead, userGoal, setUserGoal } = useStore()
-  const navigate = useNavigate()
+  const { displayName, setDisplayName, lang, setLang, sections, entries, notifications, markAllRead, userGoal, setUserGoal } = useStore()
   const [editName, setEditName] = useState(false)
-  const [nameDraft, setNameDraft] = useState(user?.name || '')
+  const [nameDraft, setNameDraft] = useState(displayName)
   const [tab, setTab] = useState('profile') // profile | badges | about
-  const [saving, setSaving] = useState(false)
 
   const streak = calcStreak(entries, sections)
   const todayScore = calcDailyScore(entries[today()] || {}, sections)
@@ -46,20 +41,10 @@ export default function Profile() {
     return b
   })
 
-  const saveName = async () => {
+  const saveName = () => {
     if (!nameDraft.trim()) return
-    setSaving(true)
-    try {
-      if (user?.id) await dbSaveProfile(user.id, { name: nameDraft })
-    } catch(e) { console.error(e) }
+    setDisplayName(nameDraft.trim())
     setEditName(false)
-    setSaving(false)
-  }
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    logout()
-    navigate('/auth')
   }
 
   const stats = [
@@ -78,16 +63,15 @@ export default function Profile() {
         <div className="absolute inset-0 bg-gradient-to-b from-orange-500/5 to-transparent pointer-events-none"/>
         <div className="relative z-10">
           <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-3 border-2 border-orange-500/40">
-            {user?.avatar
-              ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover"/>
-              : <div className="w-full h-full gradient-brand flex items-center justify-center text-white font-bold font-display text-3xl">
-                  {user?.name?.[0]?.toUpperCase() || 'D'}
-                </div>
-            }
+            <div className="w-full h-full gradient-brand flex items-center justify-center text-white font-bold font-display text-3xl">
+              {displayName?.[0]?.toUpperCase() || 'D'}
+            </div>
           </div>
           {editName ? (
             <div className="flex items-center gap-2 justify-center mb-1">
               <input value={nameDraft} onChange={e=>setNameDraft(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && saveName()}
+                placeholder={t(lang,'তোমার নাম','Your name')}
                 className="bg-transparent border-b border-orange-500/50 text-white text-lg font-display font-bold outline-none text-center w-40"
                 autoFocus/>
               <button onClick={saveName} className="text-orange-400 hover:text-orange-300">
@@ -96,13 +80,12 @@ export default function Profile() {
             </div>
           ) : (
             <div className="flex items-center gap-2 justify-center mb-1">
-              <h2 className="font-display font-bold text-white text-xl">{user?.name}</h2>
+              <h2 className="font-display font-bold text-white text-xl">{displayName || t(lang,'তুমি','You')}</h2>
               <button onClick={() => setEditName(true)} className="text-gray-500 hover:text-orange-400 transition-colors">
                 <Edit3 size={14}/>
               </button>
             </div>
           )}
-          <p className="text-gray-500 text-sm font-body">{user?.email}</p>
           {userGoal && (
             <div className="mt-3 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-xl inline-block">
               <p className="text-xs text-orange-300 font-body">🎯 {userGoal}</p>
@@ -176,22 +159,14 @@ export default function Profile() {
           {/* Settings */}
           <Card className="mb-4">
             <h3 className="font-display font-bold text-white mb-3">{t(lang,'সেটিংস','Settings')}</h3>
-            <div className="flex items-center justify-between py-2 border-b border-white/5">
+            <div className="flex items-center justify-between py-2">
               <span className="text-sm text-gray-300 font-body">{t(lang,'ভাষা','Language')}</span>
               <button onClick={() => setLang(lang==='bn'?'en':'bn')}
                 className="glass px-4 py-1.5 rounded-xl text-sm text-white font-mono hover:border-orange-500/30 transition-all">
                 {lang==='bn'?'🇧🇩 বাংলা':'🇬🇧 English'}
               </button>
             </div>
-            <div className="flex items-center justify-between py-2">
-              <span className="text-sm text-gray-300 font-body">{t(lang,'অ্যাকাউন্ট','Account')}</span>
-              <span className="text-xs text-gray-500 font-body">{user?.email}</span>
-            </div>
           </Card>
-
-          <Button variant="danger" className="w-full" onClick={handleLogout}>
-            <LogOut size={16}/> {t(lang,'লগআউট','Logout')}
-          </Button>
         </>
       )}
 
@@ -247,7 +222,7 @@ export default function Profile() {
           <Card>
             <h3 className="font-display font-bold text-white mb-3">Tech Stack</h3>
             <div className="flex flex-wrap gap-2">
-              {['React','Supabase','Groq AI','Tailwind CSS','Vercel'].map(t => (
+              {['React','Firebase','Gemini AI','Tailwind CSS','Vercel'].map(t => (
                 <span key={t} className="glass px-3 py-1 rounded-lg text-xs text-gray-400">{t}</span>
               ))}
             </div>

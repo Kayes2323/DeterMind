@@ -1,11 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { useEffect } from 'react'
 import { useStore } from './store'
-import { supabase } from './lib/supabase'
-import { useSupabaseSync } from './hooks/useSupabase'
+import { ensureAnonymousUser } from './lib/firebase'
 import { useSmartNotification } from './hooks/useNotification'
 import Layout from './components/layout/Layout'
-import Auth from './pages/Auth'
 import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
 import Todo from './pages/Todo'
@@ -15,71 +13,33 @@ import Focus from './pages/Focus'
 import Profile from './pages/Profile'
 
 function AppContent() {
-  useSupabaseSync()
   useSmartNotification()
-  const { user } = useStore()
+  const { setUser } = useStore()
+
+  // Silent per-device sign-in (no login screen) so local data also gets an
+  // optional Firestore backup — see src/lib/firebase.js and useCloudSync.js.
+  useEffect(() => {
+    ensureAnonymousUser().then(fbUser => {
+      if (fbUser) setUser({ id: fbUser.uid })
+    })
+  }, [])
+
   return (
-    <Routes>
-      <Route path="/auth" element={user ? <Navigate to="/" replace /> : <Auth />} />
-      <Route path="/*" element={
-        user ? (
-          <Layout>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/todo" element={<Todo />} />
-              <Route path="/routine" element={<Routine />} />
-              <Route path="/sigma" element={<Sigma />} />
-              <Route path="/focus" element={<Focus />} />
-              <Route path="/profile" element={<Profile />} />
-            </Routes>
-          </Layout>
-        ) : <Navigate to="/auth" replace />
-      } />
-    </Routes>
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/todo" element={<Todo />} />
+        <Route path="/routine" element={<Routine />} />
+        <Route path="/sigma" element={<Sigma />} />
+        <Route path="/focus" element={<Focus />} />
+        <Route path="/profile" element={<Profile />} />
+      </Routes>
+    </Layout>
   )
 }
 
 export default function App() {
-  const { setUser } = useStore()
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-          email: session.user.email,
-          avatar: session.user.user_metadata?.avatar_url,
-        })
-      }
-      setLoading(false)
-    })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-          email: session.user.email,
-          avatar: session.user.user_metadata?.avatar_url,
-        })
-      } else {
-        setUser(null)
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [])
-
-  if (loading) return (
-    <div className="min-h-screen bg-dark-900 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
-        <p className="text-gray-500 text-sm font-body">লোড হচ্ছে...</p>
-      </div>
-    </div>
-  )
-
   return (
     <BrowserRouter>
       <AppContent />
