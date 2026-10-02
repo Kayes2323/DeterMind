@@ -1,16 +1,46 @@
-# React + Vite
+<div align="center">
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# 🎯 DeterMind
 
-Currently, two official plugins are available:
+**Determine your path. Dominate your day.**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+A personal life-tracking and self-improvement dashboard for students.
 
-## React Compiler
+[**Open the app →**](https://deter-mind.vercel.app)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+</div>
 
-## Expanding the ESLint configuration
+## ✨ Features
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+| | Feature | What it does |
+|---|---|---|
+| ✅ | **To-do** | Plan the day's tasks and tick them off. |
+| 📅 | **Routine** | Build a daily routine and edit it any time. |
+| 📊 | **Tracker** | See your progress on a dashboard with charts. |
+| ⏱️ | **Focus** | Distraction-free focus sessions. |
+| 🏆 | **Leaderboard** | Stay motivated alongside other students. |
+| 🤖 | **Sigma** | A built-in AI assistant for advice and planning. |
+| 🔔 | **Smart reminders** | Timely nudges to keep you on track. |
+| 📱 | **Installable** | Works as a PWA on your phone. |
+
+> 🚧 DeterMind is in active development.
+
+## 🛠️ Tech stack
+
+- **React** + **Vite**
+- **Supabase** for auth and data sync
+- **Zustand** for state, **React Router**, **Recharts**, **Framer Motion**
+- **Tailwind CSS**
+
+## 🚀 Run locally
+
+```bash
+npm install
+npm run dev
+```
+
+Then open http://localhost:5173. Add your Supabase project URL and anon key to a `.env` file first.
+
+## 👤 Author
+
+Built by **[Abdul Aziz Kayes](https://github.com/Kayes2323)**.
