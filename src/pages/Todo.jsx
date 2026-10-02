@@ -4,8 +4,8 @@ import { t } from '../utils/helpers'
 import { format, subDays, addDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns'
 import { Plus, Check, Trash2, ChevronLeft, ChevronRight, Sparkles, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { askAI } from '../lib/ai'
 
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY
 
 const PRIORITIES = [
   { value: 'high', emoji: '🔴', label: 'জরুরি' },
@@ -45,7 +45,7 @@ async function dbSaveReason(id, reason, progress) {
 
 // ─── Sigma Analysis ───────────────────────────────────────────────────────────
 async function getSigmaAnalysis(todos, trackerEntries, sections, lang, date) {
-  if (!GROQ_API_KEY || todos.length === 0) return null
+  if (todos.length === 0) return null
   try {
     const done = todos.filter(t => t.done)
     const undone = todos.filter(t => !t.done)
@@ -69,19 +69,8 @@ Tracker: ${trackerStr}
 
 ২-৩ লাইনে সরাসরি, honest বিশ্লেষণ দাও। ${lang === 'bn' ? 'বাংলায় লেখো।' : 'Write in English.'}`
 
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_API_KEY },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile', max_tokens: 250,
-        messages: [
-          { role: 'system', content: 'তুমি Sigma — student-দের AI mentor। সরাসরি, honest, motivating বিশ্লেষণ দাও।' },
-          { role: 'user', content: prompt }
-        ]
-      })
-    })
-    const data = await res.json()
-    return data.choices?.[0]?.message?.content?.trim() || null
+    const text = await askAI({ system: 'তুমি Sigma — student-দের AI mentor। সরাসরি, honest, motivating বিশ্লেষণ দাও।', messages: [{ role: 'user', content: prompt }], maxTokens: 250 })
+    return text.trim() || null
   } catch { return null }
 }
 
