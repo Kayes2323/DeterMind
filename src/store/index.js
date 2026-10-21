@@ -4,7 +4,9 @@ import { persist } from 'zustand/middleware'
 export const useStore = create(
   persist(
     (set, get) => ({
-      // Auth (kept for optional future cloud sync; unused without login)
+      // Auth — { id, isAnonymous, name, email, avatar }. isAnonymous:true
+      // means just a silent per-device Firebase session (see App.jsx); a
+      // real Google-linked account has isAnonymous:false. See RequireAuth.
       user: null,
       setUser: (user) => set({ user }),
       logout: () => set({ user: null }),

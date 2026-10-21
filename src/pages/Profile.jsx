@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { useStore } from '../store'
 import { Card, Badge } from '../components/ui'
 import { t, calcStreak, calcDailyScore, getLast30Days, today } from '../utils/helpers'
+import { signInWithGoogle, signOutUser } from '../lib/firebase'
 import {
   Bell, User, Target, Flame, BarChart2,
   CheckSquare, Edit3, Save, Shield, Info, Star,
-  ChevronRight, Award
+  ChevronRight, Award, LogOut, LogIn
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -19,10 +20,27 @@ const BADGES = [
 ]
 
 export default function Profile() {
-  const { displayName, setDisplayName, lang, setLang, sections, entries, notifications, markAllRead, userGoal, setUserGoal } = useStore()
+  const { displayName, setDisplayName, lang, setLang, sections, entries, notifications, markAllRead, userGoal, setUserGoal, user } = useStore()
   const [editName, setEditName] = useState(false)
   const [nameDraft, setNameDraft] = useState(displayName)
   const [tab, setTab] = useState('profile') // profile | badges | about
+  const [loginLoading, setLoginLoading] = useState(false)
+  const [loginError, setLoginError] = useState('')
+  const isLoggedIn = user && !user.isAnonymous
+  const shownName = isLoggedIn ? (user.name || displayName) : displayName
+
+  const handleLogin = async () => {
+    setLoginLoading(true)
+    setLoginError('')
+    try {
+      await signInWithGoogle()
+    } catch (e) {
+      console.error('Login error:', e)
+      setLoginError(t(lang, 'Login-এ সমস্যা হয়েছে', 'Login failed'))
+    } finally {
+      setLoginLoading(false)
+    }
+  }
 
   const streak = calcStreak(entries, sections)
   const todayScore = calcDailyScore(entries[today()] || {}, sections)
@@ -63,11 +81,19 @@ export default function Profile() {
         <div className="absolute inset-0 bg-gradient-to-b from-orange-500/5 to-transparent pointer-events-none"/>
         <div className="relative z-10">
           <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-3 border-2 border-orange-500/40">
-            <div className="w-full h-full gradient-brand flex items-center justify-center text-white font-bold font-display text-3xl">
-              {displayName?.[0]?.toUpperCase() || 'D'}
-            </div>
+            {isLoggedIn && user.avatar
+              ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover"/>
+              : <div className="w-full h-full gradient-brand flex items-center justify-center text-white font-bold font-display text-3xl">
+                  {shownName?.[0]?.toUpperCase() || 'D'}
+                </div>
+            }
           </div>
-          {editName ? (
+          {isLoggedIn ? (
+            <div className="mb-1">
+              <h2 className="font-display font-bold text-white text-xl">{user.name}</h2>
+              {user.email && <p className="text-gray-500 text-sm font-body">{user.email}</p>}
+            </div>
+          ) : editName ? (
             <div className="flex items-center gap-2 justify-center mb-1">
               <input value={nameDraft} onChange={e=>setNameDraft(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && saveName()}
@@ -166,6 +192,38 @@ export default function Profile() {
                 {lang==='bn'?'🇧🇩 বাংলা':'🇬🇧 English'}
               </button>
             </div>
+          </Card>
+
+          {/* Login / Logout */}
+          <Card className="mb-4">
+            <h3 className="font-display font-bold text-white mb-3">{t(lang,'অ্যাকাউন্ট','Account')}</h3>
+            {isLoggedIn ? (
+              <>
+                <p className="text-xs text-gray-500 font-body mb-3">
+                  {t(lang,'Tracker, Todo, Routine, Sigma, Focus — সব ফিচার আনলক আছে।','Tracker, Todo, Routine, Sigma, Focus — all features unlocked.')}
+                </p>
+                <button onClick={signOutUser}
+                  className="w-full flex items-center justify-center gap-2 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 font-medium py-2.5 rounded-xl transition-all">
+                  <LogOut size={15}/> {t(lang,'লগআউট','Logout')}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-gray-500 font-body mb-3">
+                  {t(lang,'অ্যাপ ঘুরে দেখার জন্য login লাগে না, কিন্তু Tracker, Todo, Routine, Sigma, Focus ব্যবহার করতে Google দিয়ে login করতে হবে।','Browsing needs no login, but using Tracker, Todo, Routine, Sigma or Focus needs a quick Google sign-in.')}
+                </p>
+                {loginError && (
+                  <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2 mb-3">{loginError}</p>
+                )}
+                <button onClick={handleLogin} disabled={loginLoading}
+                  className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-800 font-medium py-2.5 rounded-xl transition-all disabled:opacity-50">
+                  {loginLoading
+                    ? <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                    : <LogIn size={15}/>}
+                  {t(lang,'Google দিয়ে Login করো','Sign in with Google')}
+                </button>
+              </>
+            )}
           </Card>
         </>
       )}
