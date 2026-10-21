@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useStore } from '../store'
 import { today, calcDailyScore } from '../utils/helpers'
 import { format, subDays } from 'date-fns'
-import { chatWithGemini } from '../lib/gemini'
+import { askAI } from '../lib/ai'
 
 async function generateSmartNotification(todayData, yesterdayData, sections, lang) {
   if (!sections.length) return null
@@ -16,11 +16,12 @@ async function generateSmartNotification(todayData, yesterdayData, sections, lan
       ? `গতকাল: ${yesterdayStr} (score: ${yesterdayScore})\nআজ: ${todayStr} (score: ${todayScore})\n\nএকটি ছোট notification message লেখো (১ লাইন, ৮০ character-এর মধ্যে)। শুধু message, আর কিছু না।`
       : `Yesterday: ${yesterdayStr} (score: ${yesterdayScore})\nToday: ${todayStr} (score: ${todayScore})\n\nWrite one short notification message (1 line, under 80 chars). Just the message, nothing else.`
 
-    const reply = await chatWithGemini(
-      [{ role: 'user', content: prompt }],
-      'You are a student coach. Write very short, motivating notification messages.'
-    )
-    return reply.trim() || null
+    const text = await askAI({
+      system: 'You are a student coach. Write very short, motivating notification messages.',
+      messages: [{ role: 'user', content: prompt }],
+      maxTokens: 100,
+    })
+    return text.trim() || null
   } catch(e) {
     console.error('Smart notification error:', e)
     return null

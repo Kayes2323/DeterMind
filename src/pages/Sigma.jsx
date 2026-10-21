@@ -4,7 +4,7 @@ import { t } from '../utils/helpers'
 import { Send, RotateCcw, Sparkles, Calendar } from 'lucide-react'
 import { format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
-import { chatWithGemini } from '../lib/gemini'
+import { askAI } from '../lib/ai'
 
 function detectRoutine(text) {
   const lines = text.split('\n').filter(l => l.trim())
@@ -41,7 +41,7 @@ Your style:
 
 async function chatWithSigma(messages, lang, contextData) {
   const systemPrompt = SIGMA_SYSTEM + (contextData ? `\n\nStudent today's data: ${contextData}` : '')
-  return chatWithGemini(messages, systemPrompt)
+  return askAI({ system: systemPrompt, messages, maxTokens: 1000 })
 }
 
 const FORMULAS = [

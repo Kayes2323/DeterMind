@@ -3,7 +3,7 @@ import { useStore } from '../store'
 import { t } from '../utils/helpers'
 import { format, subDays, addDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns'
 import { Plus, Check, Trash2, ChevronLeft, ChevronRight, Sparkles, X } from 'lucide-react'
-import { chatWithGemini } from '../lib/gemini'
+import { askAI } from '../lib/ai'
 import { dbLoadTodos, dbSaveTodo, dbToggleTodo, dbDeleteTodo, dbSaveReason } from '../hooks/useCloudSync'
 
 const PRIORITIES = [
@@ -45,11 +45,8 @@ Tracker: ${trackerStr}
 
 ২-৩ লাইনে সরাসরি, honest বিশ্লেষণ দাও। ${lang === 'bn' ? 'বাংলায় লেখো।' : 'Write in English.'}`
 
-    const reply = await chatWithGemini(
-      [{ role: 'user', content: prompt }],
-      'তুমি Sigma — student-দের AI mentor। সরাসরি, honest, motivating বিশ্লেষণ দাও।'
-    )
-    return reply.trim() || null
+    const text = await askAI({ system: 'তুমি Sigma — student-দের AI mentor। সরাসরি, honest, motivating বিশ্লেষণ দাও।', messages: [{ role: 'user', content: prompt }], maxTokens: 250 })
+    return text.trim() || null
   } catch (e) { console.error('Sigma analysis error:', e); return null }
 }
 
