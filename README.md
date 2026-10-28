@@ -28,7 +28,8 @@ A personal life-tracking and self-improvement dashboard for students.
 ## 🛠️ Tech stack
 
 - **React** + **Vite**
-- **Supabase** for auth and data sync
+- **Firebase** (Google login + Firestore) for optional cloud backup — browsing never needs it, using a feature does
+- **Gemini**, called through a server route (`api/ai.js`) so the key never reaches the browser
 - **Zustand** for state, **React Router**, **Recharts**, **Framer Motion**
 - **Tailwind CSS**
 
@@ -39,7 +40,7 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:5173. Add your Supabase project URL and anon key to a `.env` file first.
+Then open http://localhost:5173. Copy `.env.example` to `.env` and fill in your Firebase project config and `GEMINI_API_KEY` first — see the comments in `.env.example` for what each one needs and where it's set (Vercel project settings for the server-only key).
 
 ## 👤 Author
 

@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useStore } from '../../store'
 import { Home, BarChart2, Calendar, Timer, LogOut, ChevronRight, Zap } from 'lucide-react'
 import { clsx } from 'clsx'
+import { signOutUser } from '../../lib/firebase'
 
 function SigmaIcon({ size = 20, className = '', isActive = false }) {
   return (
@@ -44,8 +45,10 @@ const navItems = [
 ]
 
 export default function Layout({ children }) {
-  const { lang, setLang, user, logout } = useStore()
+  const { lang, setLang, displayName, user } = useStore()
   const navigate = useNavigate()
+  const isLoggedIn = user && !user.isAnonymous
+  const shownName = isLoggedIn ? (user.name || displayName) : displayName
 
   return (
     <div className="flex h-screen overflow-hidden bg-dark-900">
@@ -81,16 +84,15 @@ export default function Layout({ children }) {
           <button onClick={() => navigate('/profile')}
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-white/5 transition-all mb-2">
             <div className="w-8 h-8 rounded-full overflow-hidden border border-orange-500/30 shrink-0">
-              {user?.avatar
-                ? <img src={user.avatar} alt="" className="w-full h-full object-cover"/>
+              {isLoggedIn && user.avatar
+                ? <img src={user.avatar} alt="" className="w-full h-full object-cover" />
                 : <div className="w-full h-full gradient-brand flex items-center justify-center text-white text-xs font-bold font-display">
-                    {user?.name?.[0]?.toUpperCase()||'D'}
+                    {shownName?.[0]?.toUpperCase() || 'D'}
                   </div>
               }
             </div>
             <div className="text-left flex-1 min-w-0">
-              <p className="text-xs font-medium text-white truncate">{user?.name}</p>
-              <p className="text-[10px] text-gray-500 truncate">{user?.email}</p>
+              <p className="text-xs font-medium text-white truncate">{shownName || (lang === 'bn' ? 'তুমি' : 'You')}</p>
             </div>
           </button>
           <div className="flex gap-2">
@@ -98,10 +100,12 @@ export default function Layout({ children }) {
               className="flex-1 glass rounded-xl py-1.5 text-xs text-gray-400 hover:text-white transition-all text-center font-mono">
               {lang === 'bn' ? 'EN' : 'বাং'}
             </button>
-            <button onClick={() => { logout(); navigate('/auth') }}
-              className="flex-1 glass rounded-xl py-1.5 text-xs text-gray-500 hover:text-red-400 transition-all text-center">
-              Logout
-            </button>
+            {isLoggedIn && (
+              <button onClick={signOutUser}
+                className="flex-1 glass rounded-xl py-1.5 text-xs text-gray-500 hover:text-red-400 transition-all text-center flex items-center justify-center gap-1">
+                <LogOut size={12} />
+              </button>
+            )}
           </div>
         </div>
       </aside>
@@ -132,10 +136,10 @@ export default function Layout({ children }) {
             {/* Profile avatar top right */}
             <button onClick={() => navigate('/profile')}
               className="w-9 h-9 rounded-full overflow-hidden border-2 border-orange-500/40 active:scale-95 transition-all">
-              {user?.avatar
-                ? <img src={user.avatar} alt="" className="w-full h-full object-cover"/>
+              {isLoggedIn && user.avatar
+                ? <img src={user.avatar} alt="" className="w-full h-full object-cover" />
                 : <div className="w-full h-full gradient-brand flex items-center justify-center text-white text-sm font-bold font-display">
-                    {user?.name?.[0]?.toUpperCase()||'D'}
+                    {shownName?.[0]?.toUpperCase() || 'D'}
                   </div>
               }
             </button>

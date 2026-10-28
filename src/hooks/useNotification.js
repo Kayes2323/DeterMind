@@ -1,9 +1,8 @@
-import { askAI } from '../lib/ai'
 import { useEffect } from 'react'
 import { useStore } from '../store'
 import { today, calcDailyScore } from '../utils/helpers'
 import { format, subDays } from 'date-fns'
-
+import { askAI } from '../lib/ai'
 
 async function generateSmartNotification(todayData, yesterdayData, sections, lang) {
   if (!sections.length) return null
@@ -24,6 +23,7 @@ async function generateSmartNotification(todayData, yesterdayData, sections, lan
     })
     return text.trim() || null
   } catch(e) {
+    console.error('Smart notification error:', e)
     return null
   }
 }

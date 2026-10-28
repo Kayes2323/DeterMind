@@ -1,59 +1,69 @@
 /* global process */
-// Server-side proxy for Groq. The Groq key lives only in Vercel's environment
-// (GROQ_API_KEY, no VITE_ prefix), so it is never shipped to the browser.
-// Only signed-in DeterMind users (valid Supabase session) can call it.
+// Server-side proxy for Gemini. The key lives only in Vercel's environment
+// (GEMINI_API_KEY, no VITE_ prefix), so it is never shipped to the browser.
+// Only a real (non-anonymous) signed-in Firebase user can call this — the
+// same requirement RequireAuth enforces client-side, enforced again here so
+// it can't be bypassed by calling this route directly.
 
-const MODEL = 'llama-3.3-70b-versatile'
+const GEMINI_MODEL = 'gemini-2.5-flash'
 const MAX_TOKENS = 1000
 const MAX_MESSAGES = 40
 const MAX_CHARS = 8000
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
+const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY
 
-async function isSignedIn(token) {
-  if (!token || !SUPABASE_URL || !SUPABASE_ANON_KEY) return false
-  const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
+async function isRealSignedInUser(idToken) {
+  if (!idToken || !FIREBASE_API_KEY) return false
+  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_API_KEY}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken }),
   })
-  return r.ok
+  if (!r.ok) return false
+  const data = await r.json()
+  const user = data.users?.[0]
+  // Anonymous Firebase users have no linked identity provider; real accounts do.
+  return !!user && Array.isArray(user.providerUserInfo) && user.providerUserInfo.length > 0
 }
 
 function cleanMessages(system, messages) {
   if (!Array.isArray(messages) || messages.length === 0 || messages.length > MAX_MESSAGES) return null
   const out = []
-  if (typeof system === 'string' && system.trim()) out.push({ role: 'system', content: system.slice(0, MAX_CHARS) })
   for (const m of messages) {
     if (!m || !['user', 'assistant'].includes(m.role) || typeof m.content !== 'string') return null
-    out.push({ role: m.role, content: m.content.slice(0, MAX_CHARS) })
+    out.push({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content.slice(0, MAX_CHARS) }] })
   }
-  return out
+  return { system: typeof system === 'string' ? system.slice(0, MAX_CHARS) : '', contents: out }
 }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-  if (!process.env.GROQ_API_KEY) return res.status(500).json({ error: 'AI is not configured' })
+  if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'AI is not configured' })
 
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '')
-  if (!(await isSignedIn(token))) return res.status(401).json({ error: 'Sign in required' })
+  if (!(await isRealSignedInUser(token))) return res.status(401).json({ error: 'Sign in required' })
 
   const { system, messages, maxTokens } = req.body || {}
   const clean = cleanMessages(system, messages)
   if (!clean) return res.status(400).json({ error: 'Invalid request' })
 
   try {
-    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: Math.min(Math.max(Number(maxTokens) || 300, 1), MAX_TOKENS),
-        messages: clean,
-      }),
-    })
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: clean.contents,
+          ...(clean.system ? { systemInstruction: { parts: [{ text: clean.system }] } } : {}),
+          generationConfig: { maxOutputTokens: Math.min(Math.max(Number(maxTokens) || 300, 1), MAX_TOKENS) },
+        }),
+      }
+    )
     if (!r.ok) return res.status(502).json({ error: 'AI service error' })
     const data = await r.json()
-    return res.status(200).json({ text: data.choices?.[0]?.message?.content ?? '' })
+    const text = data.candidates?.[0]?.content?.parts?.map(p => p.text).join('') ?? ''
+    return res.status(200).json({ text })
   } catch {
     return res.status(502).json({ error: 'AI service unreachable' })
   }

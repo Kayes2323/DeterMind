@@ -28,7 +28,7 @@ self.addEventListener('activate', e => {
 // Fetch — network first, fallback to cache
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return
-  if (e.request.url.includes('supabase') || e.request.url.includes('groq') || e.request.url.includes('googleapis')) return
+  if (e.request.url.includes('googleapis')) return
 
   e.respondWith(
     fetch(e.request)
